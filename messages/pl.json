@@ -1,0 +1,36 @@
+{
+  "Nav": {
+    "create": "Utwórz",
+    "login": "Zaloguj się",
+    "register": "Dołącz",
+    "profile": "Profil",
+    "chats": "Czaty",
+    "admin": "Admin",
+    "blocked": "Konto zablokowane",
+    "completeProfile": "Uzupełnij profil!"
+  },
+  "Home": {
+    "title": "Znajdź swoją ekipę.",
+    "subtitle": "Dołącz do wyjazdu lub stwórz własne ogłoszenie. Dziel koszty, dziel radość.",
+    "createBtn": "Stwórz ogłoszenie",
+    "noResults": "Brak ogłoszeń dla wybranych filtrów.",
+    "clearFilters": "Wyczyść wszystkie filtry",
+    "filters": "Filtry"
+  },
+  "Filters": {
+    "type": "Typ ogłoszenia",
+    "all": "Wszystkie",
+    "offer": "Mam miejsce",
+    "seek": "Szukam wyjazdu",
+    "activity": "Aktywność",
+    "when": "Kiedy?",
+    "where": "Gdzie?",
+    "budget": "Budżet",
+    "who": "Kto jedzie?",
+    "children": "Dzieci",
+    "prepayment": "Wymagana zaliczka",
+    "apply": "Zastosuj filtry",
+    "clear": "Wyczyść",
+    "filters": "Filtry"
+  }
+}

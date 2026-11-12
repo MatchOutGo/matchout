@@ -1,0 +1,36 @@
+{
+  "Nav": {
+    "create": "Create",
+    "login": "Log in",
+    "register": "Join",
+    "profile": "Profile",
+    "chats": "Chats",
+    "admin": "Admin",
+    "blocked": "Account blocked",
+    "completeProfile": "Complete profile!"
+  },
+  "Home": {
+    "title": "Find your squad.",
+    "subtitle": "Join a trip or create your own listing. Share costs, share joy.",
+    "createBtn": "Create listing",
+    "noResults": "No listings match your filters.",
+    "clearFilters": "Clear all filters",
+    "filters": "Filters"
+  },
+  "Filters": {
+    "type": "Listing type",
+    "all": "All",
+    "offer": "I have a spot",
+    "seek": "Looking for a trip",
+    "activity": "Activity",
+    "when": "When?",
+    "where": "Where?",
+    "budget": "Budget",
+    "who": "Who's going?",
+    "children": "Children",
+    "prepayment": "Prepayment required",
+    "apply": "Apply filters",
+    "clear": "Clear",
+    "filters": "Filters"
+  }
+}
