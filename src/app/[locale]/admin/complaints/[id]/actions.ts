@@ -10,7 +10,8 @@ export async function banUser(formData: FormData) {
   
   if (!user) redirect('/login')
   
-  const targetUserId = formData.get('userId') as string
+  const complaintId = formData.get('complaintId') as string
+  const targetUserId = formData.get('targetUserId') as string
   const days = Number(formData.get('days')) || 7
   const reason = formData.get('reason') as string
 
@@ -40,24 +41,19 @@ export async function banUser(formData: FormData) {
     }
   })
 
-  revalidatePath('/admin/users')
+  // 5. Закрываем жалобу
+  await supabase.from('complaints').update({ status: 'resolved' }).eq('id', complaintId)
+
+  revalidatePath('/admin/complaints')
+  redirect('/admin/complaints')
 }
 
-export async function unbanUser(formData: FormData) {
+export async function dismissComplaint(formData: FormData) {
   const supabase = await createClient()
-  const targetUserId = formData.get('userId') as string
-
-  await supabase.from('profiles').update({ is_banned: false }).eq('id', targetUserId)
-  await supabase.from('blacklist').delete().eq('user_id', targetUserId)
-
-  revalidatePath('/admin/users')
-}
-
-export async function deleteListing(formData: FormData) {
-  const supabase = await createClient()
-  const listingId = formData.get('listingId') as string
-
-  await supabase.from('listings').delete().eq('id', listingId)
+  const complaintId = formData.get('complaintId') as string
   
-  revalidatePath('/admin/listings')
+  await supabase.from('complaints').update({ status: 'dismissed' }).eq('id', complaintId)
+  
+  revalidatePath('/admin/complaints')
+  redirect('/admin/complaints')
 }
