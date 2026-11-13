@@ -23,7 +23,7 @@ type ActivityOption = { value: string; label_pl: string }
 
 export default function FilterSidebar({ 
   params, activities, hasActiveFilters, allPickupCities,
-  showGender = true, showChildren = true, showBudget = true, showBusFilter = true // <-- Добавили пропс
+  showGender = true, showChildren = true, showBudget = true, showBusFilter = true
 }: { 
   params: SearchParams, 
   activities: ActivityOption[], 
@@ -32,7 +32,7 @@ export default function FilterSidebar({
   showGender?: boolean,
   showChildren?: boolean,
   showBudget?: boolean,
-  showBusFilter?: boolean, // <-- Типизируем
+  showBusFilter?: boolean,
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const t = useTranslations('Filters')
@@ -88,8 +88,8 @@ export default function FilterSidebar({
             <div className="space-y-2">
               <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('when')}</label>
               <div className="space-y-2">
-                <input type="date" name="dateStart" defaultValue={params.dateStart} className="w-full bg-[#f5f5f7] border-none rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-[#0071e3]/50 outline-none text-gray-700" title="Data od" />
-                <input type="date" name="dateEnd" defaultValue={params.dateEnd} className="w-full bg-[#f5f5f7] border-none rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-[#0071e3]/50 outline-none text-gray-700" title="Data do" />
+                <input type="date" name="dateStart" defaultValue={params.dateStart} className="w-full bg-[#f5f5f7] border-none rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-[#3a3a5c]/50 outline-none text-gray-700" title="Data od" />
+                <input type="date" name="dateEnd" defaultValue={params.dateEnd} className="w-full bg-[#f5f5f7] border-none rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-[#3a3a5c]/50 outline-none text-gray-700" title="Data do" />
               </div>
             </div>
 
@@ -102,7 +102,7 @@ export default function FilterSidebar({
               <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('where')}</label>
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input name="city" defaultValue={params.city} placeholder="Miasto" className="w-full bg-[#f5f5f7] border-none rounded-xl pl-9 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-[#0071e3]/50 outline-none" />
+                <input name="city" defaultValue={params.city} placeholder="Miasto" className="w-full bg-[#f5f5f7] border-none rounded-xl pl-9 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-[#3a3a5c]/50 outline-none" />
               </div>
             </div>
 
@@ -111,7 +111,7 @@ export default function FilterSidebar({
                 <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('budget')}</label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs">zł</span>
-                  <input name="maxPrice" type="number" defaultValue={params.maxPrice} placeholder="Max kwota" className="w-full bg-[#f5f5f7] border-none rounded-xl pl-8 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-[#0071e3]/50 outline-none" />
+                  <input name="maxPrice" type="number" defaultValue={params.maxPrice} placeholder="Max kwota" className="w-full bg-[#f5f5f7] border-none rounded-xl pl-8 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-[#3a3a5c]/50 outline-none" />
                 </div>
               </div>
             )}
@@ -130,11 +130,10 @@ export default function FilterSidebar({
               </div>
             )}
 
-            {/* УСЛОВНЫЙ РЕНДЕР ФИЛЬТРА БУСА */}
             {showBusFilter && (
               <div className="pt-2">
                 <label className="flex items-center gap-3 cursor-pointer p-2 rounded-xl hover:bg-gray-50 transition-colors">
-                  <input type="checkbox" name="bus" value="true" defaultChecked={params.bus === 'true'} className="w-4 h-4 text-[#0071e3] rounded focus:ring-[#0071e3] border-gray-300" />
+                  <input type="checkbox" name="bus" value="true" defaultChecked={params.bus === 'true'} className="w-4 h-4 text-[#3a3a5c] rounded focus:ring-[#3a3a5c] border-gray-300" />
                   <span className="text-sm font-medium text-gray-700">{t('bus')}</span>
                 </label>
               </div>
@@ -142,13 +141,13 @@ export default function FilterSidebar({
 
             <div className="pt-2">
               <label className="flex items-center gap-3 cursor-pointer p-2 rounded-xl hover:bg-gray-50 transition-colors">
-                <input type="checkbox" name="prepayment" value="true" defaultChecked={params.prepayment === 'true'} className="w-4 h-4 text-[#0071e3] rounded focus:ring-[#0071e3] border-gray-300" />
+                <input type="checkbox" name="prepayment" value="true" defaultChecked={params.prepayment === 'true'} className="w-4 h-4 text-[#3a3a5c] rounded focus:ring-[#3a3a5c] border-gray-300" />
                 <span className="text-sm font-medium text-gray-700">{t('prepayment')}</span>
               </label>
             </div>
 
             <div className="pt-4 space-y-2 border-t border-gray-100">
-              <button type="submit" className="w-full bg-[#0071e3] text-white px-4 py-3 rounded-xl font-medium hover:bg-[#0077ed] transition-colors shadow-sm">
+              <button type="submit" className="w-full bg-[#3a3a5c] text-white px-4 py-3 rounded-xl font-medium hover:bg-[#2c2c45] transition-colors shadow-sm">
                 {t('apply')}
               </button>
               {hasActiveFilters && (

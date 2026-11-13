@@ -47,7 +47,7 @@ async function ListingsList({ searchParams, locale }: { searchParams: Promise<Se
     return (
       <div className="text-center py-24 bg-white rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.04)] h-full flex flex-col justify-center items-center mt-6">
         <p className="text-gray-500 text-lg mb-6">Brak ogłoszeń dla wybranych filtrów.</p>
-        <Link href="/" locale={locale} className="text-[#0071e3] font-medium hover:underline bg-blue-50 px-4 py-2 rounded-xl">
+        <Link href="/" locale={locale} className="text-[#3a3a5c] font-medium hover:underline bg-indigo-50 px-4 py-2 rounded-xl">
           Wyczyść wszystkie filtry
         </Link>
       </div>
@@ -80,7 +80,7 @@ async function ListingsList({ searchParams, locale }: { searchParams: Promise<Se
             </div>
 
             <div className="p-5 flex-1 flex flex-col">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3 line-clamp-2 tracking-tight group-hover:text-[#0071e3] transition-colors">{listing.title}</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3 line-clamp-2 tracking-tight group-hover:text-[#3a3a5c] transition-colors">{listing.title}</h3>
               
               <div className="space-y-2 text-[13px] text-gray-500 mb-4 flex-1">
                 {listing.city && (
@@ -91,7 +91,7 @@ async function ListingsList({ searchParams, locale }: { searchParams: Promise<Se
                 )}
                 {listing.pickup_cities && listing.pickup_cities.length > 0 && (
                   <div className="flex items-center gap-2">
-                    <MapPin className="w-3.5 h-3.5 text-[#0071e3] shrink-0" />
+                    <MapPin className="w-3.5 h-3.5 text-[#3a3a5c] shrink-0" />
                     <span className="text-gray-900 font-medium">Skąd:</span> <span className="truncate">{listing.pickup_cities.join(', ')}</span>
                   </div>
                 )}
@@ -106,7 +106,7 @@ async function ListingsList({ searchParams, locale }: { searchParams: Promise<Se
               </div>
 
               <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
-                <span className="text-[12px] font-medium text-[#0071e3] bg-blue-50 px-2.5 py-1 rounded-md">
+                <span className="text-[12px] font-medium text-[#3a3a5c] bg-indigo-50 px-2.5 py-1 rounded-md">
                   {listing.current_participants} / {listing.max_participants} osób
                 </span>
                 {listing.prepayment_required && (
@@ -165,7 +165,7 @@ async function HomePageContent({ searchParams }: { searchParams: Promise<SearchP
             </div>
           </div>
 
-          <Link href="/listings/create" locale={locale} className="bg-[#0071e3] text-white px-6 py-2.5 rounded-full font-medium hover:bg-[#0077ed] transition-colors shadow-sm shrink-0">
+          <Link href="/listings/create" locale={locale} className="bg-[#3a3a5c] text-white px-6 py-2.5 rounded-full font-medium hover:bg-[#2c2c45] transition-colors shadow-sm shrink-0">
             {tHome('createBtn')}
           </Link>
         </div>
