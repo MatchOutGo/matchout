@@ -5,23 +5,23 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin", "cyrillic"] });
 
 export const metadata: Metadata = {
-  title: "MatchOut | Znajdź ekipę na wyjazd",
+  title: "Snow&Go | Znajdź ekipę na wyjazd",
   description: "Platforma do szukania towarzyszy na wyjazdy sportowe.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "MatchOut",
+    title: "Snow&Go",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0071e3",
+  themeColor: "#3a3a5c",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="pl">
+    <html lang="pl" suppressHydrationWarning>
       <body className={`${inter.className} bg-[#f5f5f7] min-h-screen text-gray-900 antialiased flex flex-col`}>
         {children}
       </body>

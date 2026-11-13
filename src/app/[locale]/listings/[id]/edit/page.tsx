@@ -19,7 +19,13 @@ async function EditListingContent({ params }: { params: Promise<{ id: string }> 
 
   const { data: activities } = await supabase.from('dictionaries').select('*').eq('category', 'activity').eq('is_active', true).order('sort_order')
   const { data: cities } = await supabase.from('dictionaries').select('*').eq('category', 'city').eq('is_active', true).order('label_pl')
+  const { data: countries } = await supabase.from('dictionaries').select('*').eq('category', 'country').eq('is_active', true).order('sort_order')
   const { data: initialCosts } = await supabase.from('listing_costs').select('*').eq('listing_id', id)
+  
+  // Флаги
+  const { data: featureFlagsData } = await supabase.from('dictionaries').select('*').eq('category', 'feature_flag')
+  const showGender = featureFlagsData?.find(f => f.value === 'gender_pref')?.is_active ?? true
+  const showChildren = featureFlagsData?.find(f => f.value === 'children_allowed')?.is_active ?? true
 
   return (
     <div className="max-w-4xl mx-auto pt-8 pb-24">
@@ -28,14 +34,16 @@ async function EditListingContent({ params }: { params: Promise<{ id: string }> 
         <p className="text-gray-500">Zaktualizuj szczegóły swojej przygody.</p>
       </div>
       
-      {/* ДОБАВЛЕН KEY={ID} */}
       <CreateListingForm 
         key={id}
         activities={activities || []} 
         cities={cities || []} 
+        countries={countries || []} 
         initialData={listing}
         initialCosts={initialCosts || []}
         listingId={id}
+        showGender={showGender}
+        showChildren={showChildren}
       />
     </div>
   )

@@ -16,27 +16,31 @@ export async function createListing(formData: FormData) {
 
   if (!user) return redirect('/login')
 
-  // ПРОВЕРКА БАНА
   const { data: profile } = await supabase.from('profiles').select('is_banned').eq('id', user.id).single()
   if (profile?.is_banned) {
     return redirect('/?message=' + encodeURIComponent('Twoje konto jest zablokowane. Nie możesz tworzyć ogłoszeń.'))
   }
 
-  const type = formData.get('type') as 'offer' | 'seek'
   const activity = formData.get('activity') as string
   const title = formData.get('title') as string
   const description = formData.get('description') as string
+  const country = formData.get('country') as string || 'Polska'
   const city = (formData.get('city') as string) || null;
   const date_start = formData.get('date_start') as string || null
   const date_end = formData.get('date_end') as string || null
-  const budget_max = Number(formData.get('budget_max')) || null
-  const max_participants = type === 'seek' ? 1 : (Number(formData.get('max_participants')) || 2)
+  const max_participants = Number(formData.get('max_participants')) || 2
   const gender_pref = formData.get('gender_pref') as string
   const children_allowed = formData.get('children_allowed') as string
   const language_pref = formData.get('language_pref') as string
   
   const prepayment_required = formData.get('prepayment_required') === 'true'
   const prepayment_amount = prepayment_required ? (Number(formData.get('prepayment_amount')) || 0) : null
+  
+  // Получаем флаг Буса
+  const is_bus_trip = formData.get('is_bus_trip') === 'true'
+
+  const pickupCitiesJson = formData.get('pickup_cities') as string
+  const pickupCities = pickupCitiesJson ? JSON.parse(pickupCitiesJson) : []
 
   const randomNum = Math.floor(Math.random() * 2) + 1;
   const coverImagePath = `/images/activities/${activity}${randomNum}.jpg`;
@@ -45,14 +49,16 @@ export async function createListing(formData: FormData) {
     .from('listings')
     .insert({
       user_id: user.id,
-      type,
+      type: 'offer',
       activity,
       title,
       description,
+      country,
       city,
+      pickup_cities: pickupCities,
       date_start,
       date_end,
-      budget_max,
+      budget_max: null,
       max_participants,
       current_participants: 1,
       gender_pref,
@@ -60,6 +66,7 @@ export async function createListing(formData: FormData) {
       language_pref,
       prepayment_required,
       prepayment_amount,
+      is_bus_trip,
       cover_image: coverImagePath 
     })
     .select()
@@ -71,7 +78,7 @@ export async function createListing(formData: FormData) {
   }
 
   const costsJson = formData.get('costs') as string
-  if (costsJson && type === 'offer') {
+  if (costsJson) {
     const costs = JSON.parse(costsJson) as ParsedCost[]
     if (costs.length > 0) {
       const { error: costsError } = await supabase.from('listing_costs').insert(
@@ -101,10 +108,9 @@ export async function updateListing(formData: FormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return redirect('/login')
 
-  // ПРОВЕРКА БАНА
   const { data: profile } = await supabase.from('profiles').select('is_banned').eq('id', user.id).single()
   if (profile?.is_banned) {
-    return redirect('/?message=' + encodeURIComponent('Twoje konto jest zablokowane. Nie możesz edytować ogłoszeń.'))
+    return redirect('/?message=' + encodeURIComponent('Twoje konto jest zablokowane.'))
   }
 
   const listingId = formData.get('listingId') as string;
@@ -112,36 +118,46 @@ export async function updateListing(formData: FormData) {
     return redirect('/?message=' + encodeURIComponent('Brak ID ogłoszenia.'));
   }
 
-  const type = formData.get('type') as 'offer' | 'seek'
   const activity = formData.get('activity') as string
   const title = formData.get('title') as string
   const description = formData.get('description') as string
+  const country = formData.get('country') as string || 'Polska'
   const city = (formData.get('city') as string) || null;
   const date_start = formData.get('date_start') as string || null
   const date_end = formData.get('date_end') as string || null
-  const budget_max = Number(formData.get('budget_max')) || null
-  const max_participants = type === 'seek' ? 1 : (Number(formData.get('max_participants')) || 2)
+  const max_participants = Number(formData.get('max_participants')) || 2
   const gender_pref = formData.get('gender_pref') as string
   const children_allowed = formData.get('children_allowed') as string
   const language_pref = formData.get('language_pref') as string
   
   const prepayment_required = formData.get('prepayment_required') === 'true'
   const prepayment_amount = prepayment_required ? (Number(formData.get('prepayment_amount')) || 0) : null
+  
+  // Получаем флаг Буса
+  const is_bus_trip = formData.get('is_bus_trip') === 'true'
+
+  const pickupCitiesJson = formData.get('pickup_cities') as string
+  const pickupCities = pickupCitiesJson ? JSON.parse(pickupCitiesJson) : []
 
   const { error: updateError } = await supabase
     .from('listings')
     .update({
-      type, activity, title, description, city, date_start, date_end, budget_max, max_participants, gender_pref, children_allowed, language_pref, prepayment_required, prepayment_amount
+      type: 'offer',
+      activity, title, description, country, city, pickup_cities: pickupCities, date_start, date_end, max_participants, gender_pref, children_allowed, language_pref, prepayment_required, prepayment_amount,
+      is_bus_trip
     })
     .eq('id', listingId)
     .eq('user_id', user.id)
 
-  if (updateError) return redirect(`/listings/${listingId}/edit?message=` + encodeURIComponent(updateError.message))
+  if (updateError) {
+    console.error("Update error:", updateError)
+    return redirect(`/listings/${listingId}/edit?message=` + encodeURIComponent(updateError.message))
+  }
 
   await supabase.from('listing_costs').delete().eq('listing_id', listingId)
   
   const costsJson = formData.get('costs') as string
-  if (costsJson && type === 'offer') {
+  if (costsJson) {
     const costs = JSON.parse(costsJson) as ParsedCost[]
     if (costs.length > 0) {
       const { error: costsError } = await supabase.from('listing_costs').insert(

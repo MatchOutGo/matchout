@@ -24,13 +24,16 @@
     "seek": "Looking for a trip",
     "activity": "Activity",
     "when": "When?",
-    "where": "Where?",
+    "pickup": "From where?",
+    "where": "Where to?",
     "budget": "Budget",
-    "who": "Who's going?",
+    "who": "Who is the spot for?",
     "children": "Children",
     "prepayment": "Prepayment required",
     "apply": "Apply filters",
     "clear": "Clear",
+    "bus": "Bus transport",
+"bus_trip": "Bus trip",
     "filters": "Filters"
   }
 }

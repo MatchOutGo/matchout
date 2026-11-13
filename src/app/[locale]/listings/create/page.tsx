@@ -16,25 +16,19 @@ async function CreateListingContent({
 
   if (!user) redirect('/login')
 
-  // ПРОВЕРКА БАНА
   const { data: profile } = await supabase.from('profiles').select('is_banned').eq('id', user.id).single()
   if (profile?.is_banned) {
     redirect('/?message=' + encodeURIComponent('Twoje konto jest zablokowane. Nie możesz tworzyć ogłoszeń.'))
   }
 
-  const { data: activities } = await supabase
-    .from('dictionaries')
-    .select('*')
-    .eq('category', 'activity')
-    .eq('is_active', true)
-    .order('sort_order')
-
-  const { data: cities } = await supabase
-    .from('dictionaries')
-    .select('*')
-    .eq('category', 'city')
-    .eq('is_active', true)
-    .order('label_pl')
+  const { data: activities } = await supabase.from('dictionaries').select('*').eq('category', 'activity').eq('is_active', true).order('sort_order')
+  const { data: cities } = await supabase.from('dictionaries').select('*').eq('category', 'city').eq('is_active', true).order('label_pl')
+  const { data: countries } = await supabase.from('dictionaries').select('*').eq('category', 'country').eq('is_active', true).order('sort_order')
+  
+  // Загружаем фича-флаги
+  const { data: featureFlagsData } = await supabase.from('dictionaries').select('*').eq('category', 'feature_flag')
+  const showGender = featureFlagsData?.find(f => f.value === 'gender_pref')?.is_active ?? true
+  const showChildren = featureFlagsData?.find(f => f.value === 'children_allowed')?.is_active ?? true
 
   const { message } = await searchParams
 
@@ -51,7 +45,14 @@ async function CreateListingContent({
         </div>
       )}
       
-      <CreateListingForm key="create" activities={activities || []} cities={cities || []} />
+      <CreateListingForm 
+        key="create" 
+        activities={activities || []} 
+        cities={cities || []} 
+        countries={countries || []}
+        showGender={showGender}
+        showChildren={showChildren}
+      />
     </div>
   )
 }

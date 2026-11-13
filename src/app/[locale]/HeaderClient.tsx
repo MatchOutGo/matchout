@@ -31,7 +31,6 @@ export default function HeaderClient({
   
   const supabase = useMemo(() => createClient(), [])
 
-  // Realtime подписка на сообщения и уведомления
   useEffect(() => {
     if (!user) return;
     const channel = supabase.channel('global_messages')
@@ -45,7 +44,6 @@ export default function HeaderClient({
     return () => { supabase.removeChannel(channel) }
   }, [user?.id, supabase, router])
 
-  // Функция переключения языка
   const toggleLanguage = () => {
     const nextLocale = locale === 'pl' ? 'en' : 'pl';
     router.replace(pathname, { locale: nextLocale });
@@ -55,7 +53,6 @@ export default function HeaderClient({
     <nav className="flex items-center gap-3 sm:gap-5">
       {user ? (
         <>
-          {/* Статус: Забанен / Не заполнен профиль / Кнопка Создать */}
           {profile?.is_banned ? (
             <span className="hidden sm:block text-[13px] font-bold text-red-600 bg-red-50 px-3 py-1.5 rounded-full border border-red-100">
               {t('blocked')}
@@ -70,7 +67,6 @@ export default function HeaderClient({
             </Link>
           )}
           
-          {/* Иконка Чатов */}
           <Link href="/chats" className="relative text-gray-500 hover:text-gray-900 transition-colors">
             <MessageCircle className="w-5 h-5" />
             {unreadCount > 0 && (
@@ -80,7 +76,6 @@ export default function HeaderClient({
             )}
           </Link>
 
-          {/* Иконка Уведомлений */}
           <Link href="/notifications" className="relative text-gray-500 hover:text-gray-900 transition-colors">
             <Bell className="w-5 h-5" />
             {notifCount > 0 && (
@@ -90,7 +85,6 @@ export default function HeaderClient({
             )}
           </Link>
 
-          {/* Переключатель языков */}
           <button 
             onClick={toggleLanguage}
             className="text-[13px] font-bold text-gray-500 hover:text-gray-900 transition-colors uppercase border border-gray-200 px-2.5 py-1 rounded-md bg-white shadow-sm"
@@ -98,12 +92,11 @@ export default function HeaderClient({
             {locale === 'pl' ? 'EN' : 'PL'}
           </button>
 
-          {/* Аватар и Имя */}
           <Link href="/profile" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
             <span className="text-[14px] font-medium text-gray-900 hidden sm:block">
               {profile?.first_name || t('profile')}
             </span>
-            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center font-medium text-gray-600 overflow-hidden ring-2 ring-transparent hover:ring-[#0071e3] transition-all">
+            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center font-medium text-gray-600 overflow-hidden ring-2 ring-transparent hover:ring-[#3a3a5c] transition-all">
               {profile?.avatar_url ? (
                 <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
@@ -114,9 +107,6 @@ export default function HeaderClient({
         </>
       ) : (
         <>
-          {/* Кнопки для гостей */}
-          
-          {/* Переключатель языков для гостей */}
           <button 
             onClick={toggleLanguage}
             className="text-[13px] font-bold text-gray-500 hover:text-gray-900 transition-colors uppercase border border-gray-200 px-2.5 py-1 rounded-md bg-white shadow-sm"
@@ -127,7 +117,7 @@ export default function HeaderClient({
           <Link href="/login" className="text-[14px] font-medium text-gray-500 hover:text-gray-900 transition-colors">
             {t('login')}
           </Link>
-          <Link href="/register" className="text-[14px] font-medium text-white bg-[#0071e3] hover:bg-[#0077ed] px-5 py-2 rounded-full transition-colors">
+          <Link href="/register" className="text-[14px] font-medium text-white bg-[#3a3a5c] hover:bg-[#2c2c45] px-5 py-2 rounded-full transition-colors">
             {t('register')}
           </Link>
         </>

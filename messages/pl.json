@@ -24,13 +24,16 @@
     "seek": "Szukam wyjazdu",
     "activity": "Aktywność",
     "when": "Kiedy?",
-    "where": "Gdzie?",
+    "pickup": "Skąd?",
+    "where": "Dokąd?",
     "budget": "Budżet",
-    "who": "Kto jedzie?",
+    "who": "Dla kogo miejsce?",
     "children": "Dzieci",
     "prepayment": "Wymagana zaliczka",
     "apply": "Zastosuj filtry",
     "clear": "Wyczyść",
+    "bus": "Transport busem",
+"bus_trip": "Wyjazd busem",
     "filters": "Filtry"
   }
 }

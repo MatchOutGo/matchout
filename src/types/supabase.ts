@@ -263,8 +263,10 @@ export type Database = {
           description: string
           gender_pref: string | null
           id: string
+          is_bus_trip: boolean | null
           language_pref: string | null
           max_participants: number | null
+          pickup_cities: string[] | null
           prepayment_amount: number | null
           prepayment_required: boolean | null
           status: string | null
@@ -288,8 +290,10 @@ export type Database = {
           description: string
           gender_pref?: string | null
           id?: string
+          is_bus_trip?: boolean | null
           language_pref?: string | null
           max_participants?: number | null
+          pickup_cities?: string[] | null
           prepayment_amount?: number | null
           prepayment_required?: boolean | null
           status?: string | null
@@ -313,8 +317,10 @@ export type Database = {
           description?: string
           gender_pref?: string | null
           id?: string
+          is_bus_trip?: boolean | null
           language_pref?: string | null
           max_participants?: number | null
+          pickup_cities?: string[] | null
           prepayment_amount?: number | null
           prepayment_required?: boolean | null
           status?: string | null

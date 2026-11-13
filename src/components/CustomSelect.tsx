@@ -9,18 +9,26 @@ export default function CustomSelect({
   name,
   options,
   defaultValue,
-  placeholder = "Wybierz..."
+  placeholder = "Wybierz...",
+  onChange
 }: {
   name: string,
   options: Option[],
   defaultValue?: string,
-  placeholder?: string
+  placeholder?: string,
+  onChange?: (value: string) => void
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const [selected, setSelected] = useState(defaultValue || '')
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Закрываем при клике вне компонента
+  // Официальный паттерн React для синхронизации стейта с пропсом (без useEffect)
+  const [prevDefaultValue, setPrevDefaultValue] = useState(defaultValue)
+  if (defaultValue !== prevDefaultValue) {
+    setPrevDefaultValue(defaultValue)
+    setSelected(defaultValue || '')
+  }
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -31,11 +39,16 @@ export default function CustomSelect({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  const handleSelect = (value: string) => {
+    setSelected(value)
+    setIsOpen(false)
+    if (onChange) onChange(value)
+  }
+
   const selectedOption = options.find(o => o.value === selected)
 
   return (
     <div className="relative" ref={containerRef}>
-      {/* Скрытый инпут для отправки формы */}
       <input type="hidden" name={name} value={selected} />
       
       <button
@@ -53,10 +66,7 @@ export default function CustomSelect({
             <button
               key={option.value}
               type="button"
-              onClick={() => {
-                setSelected(option.value)
-                setIsOpen(false)
-              }}
+              onClick={() => handleSelect(option.value)}
               className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-gray-50 transition-colors ${
                 selected === option.value ? 'text-[#0071e3] font-medium bg-blue-50/50' : 'text-gray-700'
               }`}
