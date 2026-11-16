@@ -21,13 +21,22 @@ export async function createListing(formData: FormData) {
     return redirect('/?message=' + encodeURIComponent('Twoje konto jest zablokowane. Nie możesz tworzyć ogłoszeń.'))
   }
 
-  const activity = formData.get('activity') as string
   const title = formData.get('title') as string
   const description = formData.get('description') as string
-  const country = formData.get('country') as string || 'Polska'
-  const city = (formData.get('city') as string) || null;
+  const trip_type = formData.get('trip_type') as string
+  const price_type = formData.get('price_type') as string
+  
+  // Массивы стран и городов (передаются как JSON-строки)
+  const countriesJson = formData.get('countries') as string
+  const countries = countriesJson ? JSON.parse(countriesJson) : []
+  const citiesJson = formData.get('cities') as string
+  const cities = citiesJson ? JSON.parse(citiesJson) : []
+
   const date_start = formData.get('date_start') as string || null
   const date_end = formData.get('date_end') as string || null
+  const ski_days = Number(formData.get('ski_days')) || 1
+  const origin_city = formData.get('origin_city') as string || null
+  
   const max_participants = Number(formData.get('max_participants')) || 2
   const gender_pref = formData.get('gender_pref') as string
   const children_allowed = formData.get('children_allowed') as string
@@ -35,13 +44,12 @@ export async function createListing(formData: FormData) {
   
   const prepayment_required = formData.get('prepayment_required') === 'true'
   const prepayment_amount = prepayment_required ? (Number(formData.get('prepayment_amount')) || 0) : null
-  
-  // Получаем флаг Буса
-  const is_bus_trip = formData.get('is_bus_trip') === 'true'
 
   const pickupCitiesJson = formData.get('pickup_cities') as string
   const pickupCities = pickupCitiesJson ? JSON.parse(pickupCitiesJson) : []
 
+  // Ставим дефолтную активность "Narty" (пока заказчик не придумает что-то другое)
+  const activity = 'narty';
   const randomNum = Math.floor(Math.random() * 2) + 1;
   const coverImagePath = `/images/activities/${activity}${randomNum}.jpg`;
 
@@ -53,12 +61,15 @@ export async function createListing(formData: FormData) {
       activity,
       title,
       description,
-      country,
-      city,
-      pickup_cities: pickupCities,
+      trip_type,
+      price_type,
+      countries,
+      cities,
       date_start,
       date_end,
-      budget_max: null,
+      ski_days,
+      origin_city,
+      pickup_cities: pickupCities,
       max_participants,
       current_participants: 1,
       gender_pref,
@@ -66,7 +77,6 @@ export async function createListing(formData: FormData) {
       language_pref,
       prepayment_required,
       prepayment_amount,
-      is_bus_trip,
       cover_image: coverImagePath 
     })
     .select()
@@ -77,19 +87,22 @@ export async function createListing(formData: FormData) {
     return redirect('/listings/create?message=' + encodeURIComponent(listingError.message))
   }
 
-  const costsJson = formData.get('costs') as string
-  if (costsJson) {
-    const costs = JSON.parse(costsJson) as ParsedCost[]
-    if (costs.length > 0) {
-      const { error: costsError } = await supabase.from('listing_costs').insert(
-        costs.map((c) => ({
-          listing_id: listing.id,
-          title: c.title,
-          amount: Number(c.amount),
-          is_shared: c.isShared
-        }))
-      )
-      if (costsError) return redirect('/listings/create?message=' + encodeURIComponent("DB Error: " + costsError.message))
+  // Сохраняем затраты (только если выбран тип цены "Кошты делимые")
+  if (price_type === 'shared') {
+    const costsJson = formData.get('costs') as string
+    if (costsJson) {
+      const costs = JSON.parse(costsJson) as ParsedCost[]
+      if (costs.length > 0) {
+        const { error: costsError } = await supabase.from('listing_costs').insert(
+          costs.map((c) => ({
+            listing_id: listing.id,
+            title: c.title,
+            amount: Number(c.amount),
+            is_shared: c.isShared
+          }))
+        )
+        if (costsError) return redirect('/listings/create?message=' + encodeURIComponent("DB Error: " + costsError.message))
+      }
     }
   }
 
@@ -118,13 +131,21 @@ export async function updateListing(formData: FormData) {
     return redirect('/?message=' + encodeURIComponent('Brak ID ogłoszenia.'));
   }
 
-  const activity = formData.get('activity') as string
   const title = formData.get('title') as string
   const description = formData.get('description') as string
-  const country = formData.get('country') as string || 'Polska'
-  const city = (formData.get('city') as string) || null;
+  const trip_type = formData.get('trip_type') as string
+  const price_type = formData.get('price_type') as string
+  
+  const countriesJson = formData.get('countries') as string
+  const countries = countriesJson ? JSON.parse(countriesJson) : []
+  const citiesJson = formData.get('cities') as string
+  const cities = citiesJson ? JSON.parse(citiesJson) : []
+
   const date_start = formData.get('date_start') as string || null
   const date_end = formData.get('date_end') as string || null
+  const ski_days = Number(formData.get('ski_days')) || 1
+  const origin_city = formData.get('origin_city') as string || null
+  
   const max_participants = Number(formData.get('max_participants')) || 2
   const gender_pref = formData.get('gender_pref') as string
   const children_allowed = formData.get('children_allowed') as string
@@ -132,9 +153,6 @@ export async function updateListing(formData: FormData) {
   
   const prepayment_required = formData.get('prepayment_required') === 'true'
   const prepayment_amount = prepayment_required ? (Number(formData.get('prepayment_amount')) || 0) : null
-  
-  // Получаем флаг Буса
-  const is_bus_trip = formData.get('is_bus_trip') === 'true'
 
   const pickupCitiesJson = formData.get('pickup_cities') as string
   const pickupCities = pickupCitiesJson ? JSON.parse(pickupCitiesJson) : []
@@ -143,27 +161,27 @@ export async function updateListing(formData: FormData) {
     .from('listings')
     .update({
       type: 'offer',
-      activity, title, description, country, city, pickup_cities: pickupCities, date_start, date_end, max_participants, gender_pref, children_allowed, language_pref, prepayment_required, prepayment_amount,
-      is_bus_trip
+      title, description, trip_type, price_type, countries, cities, date_start, date_end, ski_days, origin_city, pickup_cities: pickupCities, max_participants, gender_pref, children_allowed, language_pref, prepayment_required, prepayment_amount
     })
     .eq('id', listingId)
     .eq('user_id', user.id)
 
   if (updateError) {
-    console.error("Update error:", updateError)
     return redirect(`/listings/${listingId}/edit?message=` + encodeURIComponent(updateError.message))
   }
 
   await supabase.from('listing_costs').delete().eq('listing_id', listingId)
   
-  const costsJson = formData.get('costs') as string
-  if (costsJson) {
-    const costs = JSON.parse(costsJson) as ParsedCost[]
-    if (costs.length > 0) {
-      const { error: costsError } = await supabase.from('listing_costs').insert(
-        costs.map((c) => ({ listing_id: listingId, title: c.title, amount: Number(c.amount), is_shared: c.isShared }))
-      )
-      if (costsError) return redirect(`/listings/${listingId}/edit?message=` + encodeURIComponent("DB Error: " + costsError.message))
+  if (price_type === 'shared') {
+    const costsJson = formData.get('costs') as string
+    if (costsJson) {
+      const costs = JSON.parse(costsJson) as ParsedCost[]
+      if (costs.length > 0) {
+        const { error: costsError } = await supabase.from('listing_costs').insert(
+          costs.map((c) => ({ listing_id: listingId, title: c.title, amount: Number(c.amount), is_shared: c.isShared }))
+        )
+        if (costsError) return redirect(`/listings/${listingId}/edit?message=` + encodeURIComponent("DB Error: " + costsError.message))
+      }
     }
   }
 

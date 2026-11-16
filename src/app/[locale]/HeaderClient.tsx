@@ -96,7 +96,7 @@ export default function HeaderClient({
             <span className="text-[14px] font-medium text-gray-900 hidden sm:block">
               {profile?.first_name || t('profile')}
             </span>
-            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center font-medium text-gray-600 overflow-hidden ring-2 ring-transparent hover:ring-[#3a3a5c] transition-all">
+            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center font-medium text-gray-600 overflow-hidden ring-2 ring-transparent hover:ring-[#0066cc] transition-all">
               {profile?.avatar_url ? (
                 <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
@@ -117,7 +117,7 @@ export default function HeaderClient({
           <Link href="/login" className="text-[14px] font-medium text-gray-500 hover:text-gray-900 transition-colors">
             {t('login')}
           </Link>
-          <Link href="/register" className="text-[14px] font-medium text-white bg-[#3a3a5c] hover:bg-[#2c2c45] px-5 py-2 rounded-full transition-colors">
+          <Link href="/register" className="text-[14px] font-medium text-white bg-[#0066cc] hover:bg-[#004c99] px-5 py-2 rounded-full transition-colors">
             {t('register')}
           </Link>
         </>

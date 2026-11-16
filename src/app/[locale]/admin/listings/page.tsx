@@ -5,7 +5,6 @@ import { deleteListing } from '@/app/[locale]/admin/actions';
 import Link from 'next/link';
 import { Trash2, ExternalLink } from 'lucide-react';
 
-// 1. Внутренний компонент с логикой
 async function ListingsContent() {
   await connection();
   const supabase = await createClient();
@@ -45,7 +44,7 @@ async function ListingsContent() {
                   {l.created_at ? new Date(l.created_at).toLocaleDateString() : 'Brak daty'}
                 </td>
                 <td className="px-6 py-4 text-right flex items-center justify-end gap-4">
-                  <Link href={`/listings/${l.id}`} target="_blank" className="text-gray-400 hover:text-[#0071e3]" title="Zobacz">
+                  <Link href={`/listings/${l.id}`} target="_blank" className="text-gray-400 hover:text-[#0066cc]" title="Zobacz">
                     <ExternalLink className="w-4 h-4" />
                   </Link>
                   <form action={deleteListing}>
@@ -64,7 +63,6 @@ async function ListingsContent() {
   );
 }
 
-// 2. Синхронная обертка
 export default function AdminListingsPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-6">

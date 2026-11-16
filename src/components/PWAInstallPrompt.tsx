@@ -68,7 +68,7 @@ export default function PWAInstallPrompt() {
     <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-[100] animate-in slide-in-from-bottom-10 fade-in">
       <div className="bg-white/90 backdrop-blur-xl border border-gray-200 shadow-2xl rounded-2xl p-5 flex items-start gap-4 relative">
         <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center shrink-0">
-          <img src="/logo.png" alt="Logo" className="w-8 h-8 rounded-lg" />
+          <img src="/logo.jpg" alt="Logo" className="w-8 h-8 rounded-lg" />
         </div>
         <div className="flex-1 pr-6">
           <h3 className="font-semibold text-gray-900 mb-1">Zainstaluj Snow&Go</h3>
@@ -78,7 +78,7 @@ export default function PWAInstallPrompt() {
               : "Zainstaluj naszą aplikację, aby mieć szybki dostęp i powiadomienia."}
           </p>
           <div className="flex gap-2">
-            <button onClick={handleInstallClick} className="bg-[#3a3a5c] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#2c2c45] transition-colors flex items-center gap-2">
+            <button onClick={handleInstallClick} className="bg-[#0066cc] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#004c99] transition-colors flex items-center gap-2">
               {isIOS ? <Share className="w-4 h-4" /> : <Download className="w-4 h-4" />}
               {isIOS ? 'Jak zainstalować?' : 'Zainstaluj'}
             </button>

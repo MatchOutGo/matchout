@@ -54,8 +54,8 @@ async function Header() {
       <header className="sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-gray-200/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group">
-            <img src="/logo.png" alt="Snow&Go Logo" className="w-9 h-9 rounded-xl object-cover shadow-sm group-hover:opacity-80 transition-opacity" />
-            <span className="text-xl font-black text-[#3a3a5c] tracking-tighter group-hover:opacity-70 transition-opacity">
+            <img src="/logo.jpg" alt="Snow&Go Logo" className="w-9 h-9 rounded-xl object-cover shadow-sm group-hover:opacity-80 transition-opacity" />
+            <span className="text-xl font-black text-[#0066cc] tracking-tighter group-hover:opacity-70 transition-opacity">
               Snow&Go
             </span>
           </Link>

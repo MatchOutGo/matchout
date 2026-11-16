@@ -21,15 +21,12 @@ async function CreateListingContent({
     redirect('/?message=' + encodeURIComponent('Twoje konto jest zablokowane. Nie możesz tworzyć ogłoszeń.'))
   }
 
-  const { data: activities } = await supabase.from('dictionaries').select('*').eq('category', 'activity').eq('is_active', true).order('sort_order')
-  const { data: cities } = await supabase.from('dictionaries').select('*').eq('category', 'city').eq('is_active', true).order('label_pl')
-  const { data: countries } = await supabase.from('dictionaries').select('*').eq('category', 'country').eq('is_active', true).order('sort_order')
+  // Загружаем справочники
+  const { data: citiesData } = await supabase.from('dictionaries').select('*').eq('category', 'city').eq('is_active', true).order('label_pl')
+  const { data: countriesData } = await supabase.from('dictionaries').select('*').eq('category', 'country').eq('is_active', true).order('sort_order')
+  const { data: tripTypesData } = await supabase.from('dictionaries').select('*').eq('category', 'trip_type').eq('is_active', true).order('sort_order')
+  const { data: priceTypesData } = await supabase.from('dictionaries').select('*').eq('category', 'price_type').eq('is_active', true).order('sort_order')
   
-  // Загружаем фича-флаги
-  const { data: featureFlagsData } = await supabase.from('dictionaries').select('*').eq('category', 'feature_flag')
-  const showGender = featureFlagsData?.find(f => f.value === 'gender_pref')?.is_active ?? true
-  const showChildren = featureFlagsData?.find(f => f.value === 'children_allowed')?.is_active ?? true
-
   const { message } = await searchParams
 
   return (
@@ -47,11 +44,10 @@ async function CreateListingContent({
       
       <CreateListingForm 
         key="create" 
-        activities={activities || []} 
-        cities={cities || []} 
-        countries={countries || []}
-        showGender={showGender}
-        showChildren={showChildren}
+        cities={citiesData || []} 
+        countries={countriesData || []} 
+        tripTypes={tripTypesData || []}
+        priceTypes={priceTypesData || []}
       />
     </div>
   )

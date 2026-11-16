@@ -1,65 +1,62 @@
 'use client'
 
 import { useState } from 'react'
-import { SlidersHorizontal, MapPin, ChevronDown } from 'lucide-react'
+import { SlidersHorizontal, ChevronDown, RotateCcw } from 'lucide-react'
 import Link from 'next/link'
 import CustomSelect from './CustomSelect'
 import { useTranslations } from 'next-intl'
+import { useRouter, usePathname } from '@/i18n/routing'
 
 type SearchParams = {
-  pickup?: string;
-  city?: string;
   activity?: string;
-  maxPrice?: string;
+  countries?: string;
+  cities?: string;
   dateStart?: string;
   dateEnd?: string;
-  gender?: string;
-  children?: string;
-  prepayment?: string;
-  bus?: string;
+  transport?: string;
+  priceType?: string;
+  sort?: string;
 }
 
-type ActivityOption = { value: string; label_pl: string }
+type DictItem = { value: string; label_pl: string }
 
 export default function FilterSidebar({ 
-  params, activities, hasActiveFilters, allPickupCities,
-  showGender = true, showChildren = true, showBudget = true, showBusFilter = true
+  params, activities, countries, cities, hasActiveFilters
 }: { 
   params: SearchParams, 
-  activities: ActivityOption[], 
-  hasActiveFilters: boolean,
-  allPickupCities: string[],
-  showGender?: boolean,
-  showChildren?: boolean,
-  showBudget?: boolean,
-  showBusFilter?: boolean,
+  activities: DictItem[], 
+  countries: DictItem[],
+  cities: DictItem[],
+  hasActiveFilters: boolean
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const t = useTranslations('Filters')
+  
+  const router = useRouter()
+  const pathname = usePathname()
 
-  const activityOptions = [
-    { value: '', label: t('all') },
-    ...(activities?.map(a => ({ value: a.value, label: a.label_pl })) || [])
-  ];
+  const selectedCountries = params.countries ? params.countries.split(',') : []
+  const selectedCities = params.cities ? params.cities.split(',') : []
 
-  const pickupOptions = [
-    { value: '', label: t('all') },
-    ...(allPickupCities.map(c => ({ value: c, label: c })))
-  ]
+  const updateFilter = (key: string, value: string) => {
+    const newParams = new URLSearchParams(window.location.search)
+    if (value) {
+      newParams.set(key, value)
+    } else {
+      newParams.delete(key)
+    }
+    router.push(`${pathname}?${newParams.toString()}`)
+  }
 
-  const genderOptions = [
-    { value: '', label: t('all') },
-    { value: 'any', label: 'Wszyscy' },
-    { value: 'men', label: 'Tylko mężczyźni' },
-    { value: 'women', label: 'Tylko kobiety' }
-  ];
-
-  const childrenOptions = [
-    { value: '', label: t('all') },
-    { value: 'yes', label: 'Można z dziećmi' },
-    { value: 'no', label: 'Tylko dorośli' },
-    { value: 'family', label: 'Wyjazd rodzinny' }
-  ];
+  const toggleArrayFilter = (key: 'countries' | 'cities', value: string) => {
+    let arr = key === 'countries' ? [...selectedCountries] : [...selectedCities]
+    if (arr.includes(value)) {
+      arr = arr.filter(item => item !== value)
+    } else {
+      arr.push(value)
+    }
+    updateFilter(key, arr.join(','))
+  }
 
   return (
     <aside className="w-full lg:w-72 shrink-0 lg:sticky lg:top-24">
@@ -78,85 +75,123 @@ export default function FilterSidebar({
         </button>
 
         <div className={`${isOpen ? 'block' : 'hidden'} lg:block p-5 space-y-6 rounded-b-3xl`}>
-          <form method="GET" className="space-y-6">
+          <div className="space-y-6">
             
+            {hasActiveFilters && (
+              <div className="flex justify-end pb-2 border-b border-gray-100">
+                <Link href="/listings" className="text-xs font-medium text-gray-500 hover:text-[#0066cc] flex items-center gap-1 transition-colors">
+                  <RotateCcw className="w-3 h-3" />
+                  Pokaż wszystkie
+                </Link>
+              </div>
+            )}
+
+            {/* БЛОК AKTYWNOŚĆ СПРЯТАН */}
+            {/* 
             <div className="space-y-2">
               <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('activity')}</label>
-              <CustomSelect name="activity" options={activityOptions} defaultValue={params.activity} />
+              <CustomSelect 
+                name="activity" 
+                options={activityOptions} 
+                defaultValue={params.activity} 
+                onChange={(val) => updateFilter('activity', val)}
+              />
             </div>
+            */}
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('when')}</label>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Kiedy</label>
               <div className="space-y-2">
-                <input type="date" name="dateStart" defaultValue={params.dateStart} className="w-full bg-[#f5f5f7] border-none rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-[#3a3a5c]/50 outline-none text-gray-700" title="Data od" />
-                <input type="date" name="dateEnd" defaultValue={params.dateEnd} className="w-full bg-[#f5f5f7] border-none rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-[#3a3a5c]/50 outline-none text-gray-700" title="Data do" />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('pickup')}</label>
-              <CustomSelect name="pickup" options={pickupOptions} defaultValue={params.pickup} />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('where')}</label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input name="city" defaultValue={params.city} placeholder="Miasto" className="w-full bg-[#f5f5f7] border-none rounded-xl pl-9 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-[#3a3a5c]/50 outline-none" />
-              </div>
-            </div>
-
-            {showBudget && (
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('budget')}</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs">zł</span>
-                  <input name="maxPrice" type="number" defaultValue={params.maxPrice} placeholder="Max kwota" className="w-full bg-[#f5f5f7] border-none rounded-xl pl-8 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-[#3a3a5c]/50 outline-none" />
+                <div>
+                  <span className="text-[11px] text-gray-400 mb-1 block">Mogę wyjechać od</span>
+                  <input type="date" name="dateStart" defaultValue={params.dateStart} onChange={(e) => updateFilter('dateStart', e.target.value)} className="w-full bg-[#f5f5f7] border-none rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#0066cc]/50" />
+                </div>
+                <div>
+                  <span className="text-[11px] text-gray-400 mb-1 block">Muszę wrócić do</span>
+                  <input type="date" name="dateEnd" defaultValue={params.dateEnd} onChange={(e) => updateFilter('dateEnd', e.target.value)} className="w-full bg-[#f5f5f7] border-none rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#0066cc]/50" />
                 </div>
               </div>
-            )}
+            </div>
 
-            {showGender && (
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('who')}</label>
-                <CustomSelect name="gender" options={genderOptions} defaultValue={params.gender} />
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Kraj</label>
+              <div className="flex flex-wrap gap-1.5">
+                {countries.map(c => (
+                  <button
+                    key={c.value}
+                    type="button"
+                    onClick={() => toggleArrayFilter('countries', c.label_pl)}
+                    className={`px-2.5 py-1.5 rounded-lg text-[13px] border transition-colors ${selectedCountries.includes(c.label_pl) ? 'bg-[#0066cc] text-white border-[#0066cc]' : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-gray-300'}`}
+                  >
+                    {c.label_pl}
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
 
-            {showChildren && (
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('children')}</label>
-                <CustomSelect name="children" options={childrenOptions} defaultValue={params.children} />
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Miejscowość</label>
+              <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
+                {cities.map(c => (
+                  <button
+                    key={c.value}
+                    type="button"
+                    onClick={() => toggleArrayFilter('cities', c.label_pl)}
+                    className={`px-2.5 py-1.5 rounded-lg text-[13px] border transition-colors ${selectedCities.includes(c.label_pl) ? 'bg-[#0066cc] text-white border-[#0066cc]' : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-gray-300'}`}
+                  >
+                    {c.label_pl}
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
 
-            {showBusFilter && (
-              <div className="pt-2">
-                <label className="flex items-center gap-3 cursor-pointer p-2 rounded-xl hover:bg-gray-50 transition-colors">
-                  <input type="checkbox" name="bus" value="true" defaultChecked={params.bus === 'true'} className="w-4 h-4 text-[#3a3a5c] rounded focus:ring-[#3a3a5c] border-gray-300" />
-                  <span className="text-sm font-medium text-gray-700">{t('bus')}</span>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Preferowany transport</label>
+              <div className="space-y-2">
+                {[
+                  { val: 'osobowy', label: 'Osobowy' },
+                  { val: 'bus', label: 'Bus' },
+                  { val: '', label: 'Bez znaczenia' }
+                ].map(opt => (
+                  <label key={opt.val} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input 
+                      type="radio" 
+                      name="transport" 
+                      checked={params.transport === opt.val || (!params.transport && opt.val === '')} 
+                      onChange={() => updateFilter('transport', opt.val)} 
+                      className="text-[#0066cc] focus:ring-[#0066cc]" 
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Cena</label>
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={params.priceType === 'shared'} 
+                    onChange={(e) => updateFilter('priceType', e.target.checked ? 'shared' : '')} 
+                    className="rounded text-[#0066cc] focus:ring-[#0066cc]" 
+                  />
+                  Koszty dzielone
                 </label>
+                <select 
+                  onChange={(e) => updateFilter('sort', e.target.value)} 
+                  value={params.sort || ''} 
+                  className="w-full bg-[#f5f5f7] border-none rounded-xl p-2.5 mt-2 outline-none focus:ring-2 focus:ring-[#0066cc]/50 text-sm"
+                >
+                  <option value="">Sortowanie: Domyślne</option>
+                  <option value="asc">Od najniższej</option>
+                  <option value="desc">Od najwyższej</option>
+                </select>
               </div>
-            )}
-
-            <div className="pt-2">
-              <label className="flex items-center gap-3 cursor-pointer p-2 rounded-xl hover:bg-gray-50 transition-colors">
-                <input type="checkbox" name="prepayment" value="true" defaultChecked={params.prepayment === 'true'} className="w-4 h-4 text-[#3a3a5c] rounded focus:ring-[#3a3a5c] border-gray-300" />
-                <span className="text-sm font-medium text-gray-700">{t('prepayment')}</span>
-              </label>
             </div>
 
-            <div className="pt-4 space-y-2 border-t border-gray-100">
-              <button type="submit" className="w-full bg-[#3a3a5c] text-white px-4 py-3 rounded-xl font-medium hover:bg-[#2c2c45] transition-colors shadow-sm">
-                {t('apply')}
-              </button>
-              {hasActiveFilters && (
-                <Link href="/" className="w-full block text-center py-2 text-sm text-gray-500 hover:text-gray-900 font-medium">
-                  {t('clear')}
-                </Link>
-              )}
-            </div>
-          </form>
+          </div>
         </div>
       </div>
     </aside>

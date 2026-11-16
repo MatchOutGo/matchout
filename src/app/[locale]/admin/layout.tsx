@@ -3,7 +3,7 @@ import { connection } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, Settings, AlertTriangle, ArrowLeft, Users, Map, FileText } from "lucide-react";
+import { LayoutDashboard, Settings, AlertTriangle, ArrowLeft, Users, Map, FileText, Monitor } from "lucide-react";
 
 async function AdminSidebar() {
   await connection();
@@ -39,6 +39,10 @@ async function AdminSidebar() {
       </Link>
       <Link href="/admin/dictionaries" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 text-gray-700 font-medium transition-colors">
         <Settings className="w-5 h-5" /> Słowniki
+      </Link>
+
+ <Link href="/admin/settings" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 text-gray-700 font-medium transition-colors">
+        <Monitor className="w-5 h-5" /> Ustawienia
       </Link>
     </aside>
   );
