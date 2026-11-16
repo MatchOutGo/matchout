@@ -113,12 +113,12 @@ export default function HeaderClient({
           >
             {locale === 'pl' ? 'EN' : 'PL'}
           </button>
-
-          <Link href="/login" className="text-[14px] font-medium text-gray-500 hover:text-gray-900 transition-colors">
+ 
+          <Link 
+            href="/login" 
+            className="text-[14px] font-medium text-white bg-[#0066cc] hover:bg-[#004c99] px-6 py-2.5 rounded-full transition-colors shadow-sm"
+          >
             {t('login')}
-          </Link>
-          <Link href="/register" className="text-[14px] font-medium text-white bg-[#0066cc] hover:bg-[#004c99] px-5 py-2 rounded-full transition-colors">
-            {t('register')}
           </Link>
         </>
       )}

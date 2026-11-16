@@ -4,19 +4,35 @@ import { connection } from 'next/server';
 import { addDictionaryItem, toggleDictionaryStatus } from './actions';
 import { Plus, Eye, EyeOff, Settings2 } from 'lucide-react';
 
+// Добавляем строгий тип, чтобы TypeScript знал о новых полях
+type DictItem = {
+  id: string;
+  category: string;
+  value: string;
+  label_pl: string;
+  label_en: string | null;
+  is_active: boolean;
+  parent_value: string | null;
+  is_resort: boolean | null;
+}
+
 async function DictionariesContent() {
   await connection();
   const supabase = await createClient();
 
-  const { data: dictionaries } = await supabase
+  const { data: rawDictionaries } = await supabase
     .from('dictionaries')
     .select('*')
     .order('sort_order', { ascending: true });
 
-  const featureFlags = dictionaries?.filter(d => d.category === 'feature_flag') || [];
-  const activities = dictionaries?.filter(d => d.category === 'activity') || [];
-  const cities = dictionaries?.filter(d => d.category === 'city') || [];
-  const countries = dictionaries?.filter(d => d.category === 'country') || []; // ДОБАВИЛИ СТРАНЫ
+  // Приводим типы
+  const dictionaries = (rawDictionaries as unknown as DictItem[]) || [];
+
+  const featureFlags = dictionaries.filter(d => d.category === 'feature_flag');
+  const activities = dictionaries.filter(d => d.category === 'activity');
+  const cities = dictionaries.filter(d => d.category === 'city' && !d.is_resort);
+  const resorts = dictionaries.filter(d => d.category === 'city' && d.is_resort);
+  const countries = dictionaries.filter(d => d.category === 'country');
 
   return (
     <div className="space-y-8">
@@ -27,7 +43,6 @@ async function DictionariesContent() {
           <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
             <Settings2 className="w-5 h-5" /> Funkcje serwisu (Włącz / Wyłącz)
           </h2>
-          <p className="text-sm text-gray-500 mt-1">Zarządzaj widocznością pól w formularzach i filtrach.</p>
         </div>
         <ul className="divide-y divide-gray-100">
           {featureFlags.map((item) => (
@@ -49,7 +64,7 @@ async function DictionariesContent() {
         </ul>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* БЛОК АКТИВНОСТЕЙ */}
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-6 border-b border-gray-100 bg-gray-50/50">
@@ -80,7 +95,7 @@ async function DictionariesContent() {
           </ul>
         </div>
 
-        {/* БЛОК СТРАН (НОВЫЙ) */}
+        {/* БЛОК СТРАН */}
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-6 border-b border-gray-100 bg-gray-50/50">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Kraje</h2>
@@ -109,38 +124,84 @@ async function DictionariesContent() {
             ))}
           </ul>
         </div>
-
-        {/* БЛОК ГОРОДОВ */}
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-6 border-b border-gray-100 bg-gray-50/50">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Miasta i kurorty</h2>
-            <form action={addDictionaryItem} className="flex flex-col gap-2">
-              <input type="hidden" name="category" value="city" />
-              <input name="value" required placeholder="Nazwa systemowa" className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-[#0066cc]" />
-              <input name="label_pl" required placeholder="Nazwa PL" className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-[#0066cc]" />
-              <button type="submit" className="bg-[#0066cc] text-white px-4 py-2 rounded-xl hover:bg-[#004c99] transition-colors flex justify-center">
-                <Plus className="w-5 h-5" />
-              </button>
-            </form>
-          </div>
-          <ul className="divide-y divide-gray-100 max-h-[400px] overflow-y-auto">
-            {cities.map((item) => (
-              <li key={item.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                <div>
-                  <p className="font-medium text-gray-900">{item.label_pl}</p>
-                  <p className="text-xs text-gray-400 font-mono">{item.value}</p>
-                </div>
-                <form action={toggleDictionaryStatus.bind(null, item.id, !!item.is_active)}>
-                  <button type="submit" className={`p-2 rounded-lg transition-colors ${item.is_active ? 'text-green-600 bg-green-50 hover:bg-green-100' : 'text-gray-400 bg-gray-100 hover:bg-gray-200'}`}>
-                    {item.is_active ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                  </button>
-                </form>
-              </li>
-            ))}
-          </ul>
-        </div>
       </div>
 
+      {/* БЛОК ГОРОДОВ И КУРОРТОВ */}
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="p-6 border-b border-gray-100 bg-gray-50/50">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Miasta i Ośrodki Narciarskie</h2>
+          <form action={addDictionaryItem} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <input type="hidden" name="category" value="city" />
+            
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">Nazwa systemowa</label>
+              <input name="value" required placeholder="np. zakopane" className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-[#0066cc]" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">Nazwa PL</label>
+              <input name="label_pl" required placeholder="np. Zakopane" className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-[#0066cc]" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">Kraj</label>
+              <select name="parent_value" required className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-[#0066cc]">
+                <option value="">Wybierz...</option>
+                {countries.map(c => <option key={c.value} value={c.value}>{c.label_pl}</option>)}
+              </select>
+            </div>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer bg-[#f5f5f7] px-4 py-2 rounded-xl text-sm font-medium text-gray-700">
+                <input type="checkbox" name="is_resort" value="true" className="w-4 h-4 rounded text-[#0066cc]" />
+                To jest ośrodek?
+              </label>
+              <button type="submit" className="bg-[#0066cc] text-white px-4 py-2 rounded-xl hover:bg-[#004c99] transition-colors flex justify-center h-full">
+                <Plus className="w-5 h-5" />
+              </button>
+            </div>
+          </form>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-100">
+          {/* КОЛОНКА ГОРОДОВ */}
+          <div>
+            <h3 className="p-4 bg-gray-50 font-semibold text-gray-700 text-sm border-b border-gray-100">Miasta (Skąd)</h3>
+            <ul className="divide-y divide-gray-100 max-h-[500px] overflow-y-auto">
+              {cities.map((item) => (
+                <li key={item.id} className="p-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <div>
+                    <p className="font-medium text-gray-900 text-sm">{item.label_pl}</p>
+                    <p className="text-[10px] text-gray-400 font-mono">{item.value} • {item.parent_value}</p>
+                  </div>
+                  <form action={toggleDictionaryStatus.bind(null, item.id, !!item.is_active)}>
+                    <button type="submit" className={`p-1.5 rounded-lg transition-colors ${item.is_active ? 'text-green-600 hover:bg-green-100' : 'text-gray-400 hover:bg-gray-200'}`}>
+                      {item.is_active ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                    </button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          </div>
+          
+          {/* КОЛОНКА КУРОРТОВ */}
+          <div>
+            <h3 className="p-4 bg-gray-50 font-semibold text-gray-700 text-sm border-b border-gray-100">Ośrodki Narciarskie (Dokąd)</h3>
+            <ul className="divide-y divide-gray-100 max-h-[500px] overflow-y-auto">
+              {resorts.map((item) => (
+                <li key={item.id} className="p-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <div>
+                    <p className="font-medium text-gray-900 text-sm">{item.label_pl}</p>
+                    <p className="text-[10px] text-gray-400 font-mono">{item.value} • {item.parent_value}</p>
+                  </div>
+                  <form action={toggleDictionaryStatus.bind(null, item.id, !!item.is_active)}>
+                    <button type="submit" className={`p-1.5 rounded-lg transition-colors ${item.is_active ? 'text-green-600 hover:bg-green-100' : 'text-gray-400 hover:bg-gray-200'}`}>
+                      {item.is_active ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                    </button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -150,7 +211,7 @@ export default function AdminDictionariesPage() {
     <div className="max-w-7xl mx-auto space-y-6">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight text-gray-900">Słowniki</h1>
-        <p className="text-gray-500 mt-1">Zarządzaj aktywnościami, krajami, miastami i funkcjami serwisu.</p>
+        <p className="text-gray-500 mt-1">Zarządzaj aktywnościami, krajami, miastami i ośrodkami.</p>
       </div>
       <Suspense fallback={<div className="text-center py-20 text-gray-500">Ładowanie...</div>}>
         <DictionariesContent />

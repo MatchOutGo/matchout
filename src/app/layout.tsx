@@ -31,7 +31,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <meta name="supported-color-schemes" content="light" />
       </head>
       {/* bg-white вместо bg-[#f5f5f7] */}
-      <body className={`${inter.className} bg-white min-h-screen text-gray-900 antialiased flex flex-col`}>
+      <body className={`${inter.className} bg-[#f5f5f7] min-h-screen text-gray-900 antialiased flex flex-col`}>
         {children}
       </body>
     </html>

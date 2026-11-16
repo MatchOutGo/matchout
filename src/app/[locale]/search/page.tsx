@@ -9,7 +9,6 @@ async function SearchPageContent() {
   await connection();
   const supabase = await createClient();
   
-  // Берем активности, страны И города для фильтров
   const { data: activities } = await supabase.from('dictionaries').select('*').eq('category', 'activity').eq('is_active', true).order('sort_order');
   const { data: countries } = await supabase.from('dictionaries').select('*').eq('category', 'country').eq('is_active', true).order('sort_order');
   const { data: cities } = await supabase.from('dictionaries').select('*').eq('category', 'city').eq('is_active', true).order('sort_order');
@@ -25,14 +24,12 @@ async function SearchPageContent() {
         <p className="text-gray-500">Wybierz kryteria, a my pokażemy Ci najlepsze opcje.</p>
       </div>
 
-      <div className="bg-white p-8 rounded-3xl shadow-lg border border-gray-100">
-        {/* Передаем все три массива */}
-        <SearchFilters 
-          activities={activities || []} 
-          countries={countries || []} 
-          cities={cities || []} 
-        />
-      </div>
+      {/* УБРАЛИ БЕЛУЮ ОБЕРТКУ ЗДЕСЬ */}
+      <SearchFilters 
+        activities={activities || []} 
+        countries={countries || []} 
+        cities={cities || []} 
+      />
     </div>
   );
 }

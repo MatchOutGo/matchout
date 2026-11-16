@@ -27,6 +27,11 @@ async function CreateListingContent({
   const { data: tripTypesData } = await supabase.from('dictionaries').select('*').eq('category', 'trip_type').eq('is_active', true).order('sort_order')
   const { data: priceTypesData } = await supabase.from('dictionaries').select('*').eq('category', 'price_type').eq('is_active', true).order('sort_order')
   
+  // Загружаем фиче-флаги
+  const { data: featureFlagsData } = await supabase.from('dictionaries').select('*').eq('category', 'feature_flag')
+  const showGender = featureFlagsData?.find(f => f.value === 'gender_pref')?.is_active ?? false // по умолчанию false
+  const showChildren = featureFlagsData?.find(f => f.value === 'children_allowed')?.is_active ?? false // по умолчанию false
+  
   const { message } = await searchParams
 
   return (
@@ -48,6 +53,8 @@ async function CreateListingContent({
         countries={countriesData || []} 
         tripTypes={tripTypesData || []}
         priceTypes={priceTypesData || []}
+        showGender={showGender}
+        showChildren={showChildren}
       />
     </div>
   )

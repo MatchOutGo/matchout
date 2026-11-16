@@ -16,12 +16,13 @@ type SearchParams = {
   dateEnd?: string;
   transport?: string;
   priceType?: string;
+  origin?: string; // Добавили Skąd
   sort?: string;
 }
 
 async function ListingsList({ searchParams, locale, activities }: { searchParams: Promise<SearchParams>, locale: string, activities: any[] }) {
   const params = await searchParams;
-  const { activity, countries, cities, dateStart, dateEnd, transport, priceType } = params;
+  const { activity, countries, cities, dateStart, dateEnd, transport, priceType, origin } = params;
   const supabase = await createClient();
 
   let query = (supabase
@@ -29,6 +30,7 @@ async function ListingsList({ searchParams, locale, activities }: { searchParams
     .select(`*, profiles!user_id (first_name, avatar_url)`)
     .eq('type', 'offer')
     .eq('status', 'published')
+    .order('price_type', { ascending: false })
     .order('created_at', { ascending: false });
 
   if (activity) query = query.eq('activity', activity);
@@ -51,6 +53,11 @@ async function ListingsList({ searchParams, locale, activities }: { searchParams
   
   if (priceType === 'shared') query = query.eq('price_type', 'shared');
 
+  // Фильтр по "Skąd"
+  if (origin) {
+    query = query.or(`origin_city.ilike.%${origin}%,pickup_cities.cs.["${origin}"]`);
+  }
+
   const { data: listings } = await query;
 
   if (!listings || listings.length === 0) {
@@ -67,7 +74,6 @@ async function ListingsList({ searchParams, locale, activities }: { searchParams
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
       {listings.map((listing: any) => {
-        // Ищем польское название активности в справочнике
         const activityLabel = activities.find(a => a.value === listing.activity)?.label_pl || listing.activity;
         
         const author = Array.isArray(listing.profiles) ? listing.profiles[0] : listing.profiles;
@@ -103,10 +109,13 @@ async function ListingsList({ searchParams, locale, activities }: { searchParams
                     <span className="text-gray-900 font-medium">Dokąd:</span> <span className="truncate">{listing.cities.join(', ')}</span>
                   </div>
                 )}
-                {listing.pickup_cities && listing.pickup_cities.length > 0 && (
+                {listing.origin_city && (
                   <div className="flex items-center gap-2">
                     <MapPin className="w-3.5 h-3.5 text-[#0066cc] shrink-0" />
-                    <span className="text-gray-900 font-medium">Skąd:</span> <span className="truncate">{listing.pickup_cities.join(', ')}</span>
+                    <span className="text-gray-900 font-medium">Skąd:</span> <span className="truncate">{listing.origin_city}</span>
+                    {listing.pickup_cities && listing.pickup_cities.length > 0 && (
+                      <span className="text-xs text-gray-400 truncate">(+ {listing.pickup_cities.join(', ')})</span>
+                    )}
                   </div>
                 )}
                 <div className="flex items-center gap-2">
@@ -123,7 +132,7 @@ async function ListingsList({ searchParams, locale, activities }: { searchParams
                 <span className="text-[12px] font-medium text-[#0066cc] bg-indigo-50 px-2.5 py-1 rounded-md">
                   {listing.current_participants} / {listing.max_participants} osób
                 </span>
-                {listing.prepayment_required && (
+                {listing.price_type !== 'shared' && listing.prepayment_required && (
                   <span className="text-[11px] font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-md">
                     Zaliczka: {listing.prepayment_amount} zł
                   </span>
@@ -149,7 +158,7 @@ async function HomePageContent({ searchParams }: { searchParams: Promise<SearchP
   const { data: countries } = await supabase.from('dictionaries').select('*').eq('category', 'country').eq('is_active', true).order('sort_order');
   const { data: cities } = await supabase.from('dictionaries').select('*').eq('category', 'city').eq('is_active', true).order('sort_order');
 
-  const hasActiveFilters = params.activity || params.countries || params.cities || params.dateStart || params.dateEnd || params.transport || params.priceType;
+  const hasActiveFilters = params.activity || params.countries || params.cities || params.dateStart || params.dateEnd || params.transport || params.priceType || params.origin;
 
   return (
     <div className="space-y-6">
@@ -182,7 +191,6 @@ async function HomePageContent({ searchParams }: { searchParams: Promise<SearchP
       <div className="flex flex-col lg:flex-row gap-8 items-start">
         <FilterSidebar 
           params={params} 
-          activities={activities || []} 
           countries={countries || []}
           cities={cities || []}
           hasActiveFilters={!!hasActiveFilters} 
