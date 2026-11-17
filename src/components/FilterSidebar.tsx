@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { SlidersHorizontal, ChevronDown, RotateCcw, MountainSnow, MapPin } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, usePathname } from '@/i18n/routing'
@@ -12,20 +12,34 @@ type SearchParams = {
 
 type DictItem = { value: string; label_pl: string; parent_value?: string; is_resort?: boolean }
 
+const FAMOUS_POLISH_CITIES = [
+  'Warszawa', 'Kraków', 'Łódź', 'Wrocław', 'Poznań', 
+  'Gdańsk', 'Szczecin', 'Bydgoszcz', 'Lublin', 'Białystok', 
+  'Katowice', 'Gdynia', 'Częstochowa', 'Radom', 'Rzeszów', 
+  'Toruń', 'Sosnowiec', 'Kielce', 'Gliwice', 'Olsztyn'
+]
+
 export default function FilterSidebar({ 
   params, countries, cities, hasActiveFilters
 }: { 
   params: SearchParams, countries: DictItem[], cities: DictItem[], hasActiveFilters: boolean
 }) {
   const [isOpen, setIsOpen] = useState(false)
-  const [originCountry, setOriginCountry] = useState('')
+  const [today, setToday] = useState('') // <-- Фикс гидратации
   
   const t = useTranslations('Filters')
   const router = useRouter()
   const pathname = usePathname()
 
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setToday(new Date().toLocaleDateString('sv-SE'))
+  }, [])
+
   const selectedDestCountry = params.countries ? params.countries.split(',')[0] : ''
   const selectedDestCity = params.cities ? params.cities.split(',')[0] : ''
+
+  const polandValue = countries.find(c => c.label_pl === 'Polska')?.value || 'PL'
 
   const updateFilter = (key: string, value: string) => {
     const newParams = new URLSearchParams(window.location.search)
@@ -42,18 +56,16 @@ export default function FilterSidebar({
     router.push(`${pathname}?${newParams.toString()}`)
   }
 
-  const handleOriginCountryChange = (val: string) => {
-    setOriginCountry(val)
-    updateFilter('origin', '')
-  }
-
-  // В "Dokąd" показываем всё
-  const availableDestCities = cities.filter(c => !selectedDestCountry || c.parent_value === selectedDestCountry)
-  
-  // В "Skąd" показываем ТОЛЬКО города
-  const availableOriginCities = cities.filter(c => 
-    (!originCountry || c.parent_value === originCountry) && !c.is_resort
+  // В "Dokąd" показываем ТОЛЬКО КУРОРТЫ
+  const availableDestCities = cities.filter(c => 
+    c.is_resort && (!selectedDestCountry || c.parent_value === selectedDestCountry)
   )
+  
+  // В "Skąd" показываем ТОЛЬКО 20 известных городов Польши
+  const availableOriginCities = cities
+    .filter(c => c.parent_value === polandValue && !c.is_resort)
+    .filter(c => FAMOUS_POLISH_CITIES.includes(c.label_pl))
+    .sort((a, b) => a.label_pl.localeCompare(b.label_pl))
 
   const inputClass = "w-full bg-[#f5f5f7] border-none rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#0066cc]/50"
   const labelClass = "flex items-center gap-1 text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1"
@@ -86,8 +98,34 @@ export default function FilterSidebar({
           <div className={cardClass}>
             <h3 className={titleClass}>Kiedy</h3>
             <div className="space-y-2">
-              <input type="date" value={params.dateStart || ''} onChange={(e) => updateFilter('dateStart', e.target.value)} className={inputClass} />
-              <input type="date" value={params.dateEnd || ''} onChange={(e) => updateFilter('dateEnd', e.target.value)} className={inputClass} />
+              <div className="relative">
+                <input 
+                  type="date" 
+                  min={today}
+                  value={params.dateStart || ''} 
+                  onChange={(e) => updateFilter('dateStart', e.target.value)} 
+                  className={`${inputClass} ${!params.dateStart ? 'text-transparent' : 'text-gray-900'}`} 
+                />
+                {!params.dateStart && (
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
+                    Dowolne
+                  </span>
+                )}
+              </div>
+              <div className="relative">
+                <input 
+                  type="date" 
+                  min={params.dateStart || today}
+                  value={params.dateEnd || ''} 
+                  onChange={(e) => updateFilter('dateEnd', e.target.value)} 
+                  className={`${inputClass} ${!params.dateEnd ? 'text-transparent' : 'text-gray-900'}`} 
+                />
+                {!params.dateEnd && (
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
+                    Dowolne
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -109,7 +147,7 @@ export default function FilterSidebar({
                   <option value="">Wszystkie</option>
                   {availableDestCities.map(c => (
                     <option key={c.value} value={c.value}>
-                      {c.label_pl}{c.is_resort ? '\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0 OŚRODEK' : ''}
+                      {c.label_pl} 🚡
                     </option>
                   ))}
                 </select>
@@ -119,39 +157,44 @@ export default function FilterSidebar({
 
           <div className={cardClass}>
             <h3 className={titleClass}>Skąd</h3>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className={labelClass}>Kraj</label>
-                <select value={originCountry} onChange={(e) => handleOriginCountryChange(e.target.value)} className={inputClass}>
-                  <option value="">Wszystkie</option>
-                  {countries.map(c => <option key={c.value} value={c.value}>{c.label_pl}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className={labelClass}>
-                  <MapPin className="w-3 h-3 text-[#0066cc]" /> Miejsc.
-                </label>
-                <select value={params.origin || ''} onChange={(e) => updateFilter('origin', e.target.value)} disabled={!originCountry} className={`${inputClass} ${!originCountry ? 'opacity-50 cursor-not-allowed bg-gray-100' : ''}`}>
-                  <option value="">Wszystkie</option>
-                  {availableOriginCities.map(c => (
-                    <option key={c.value} value={c.value}>
-                      {c.label_pl}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div>
+              <label className={labelClass}>
+                <MapPin className="w-3 h-3 text-[#0066cc]" /> Miejscowość (Polska)
+              </label>
+              <select value={params.origin || ''} onChange={(e) => updateFilter('origin', e.target.value)} className={inputClass}>
+                <option value="">Wszystkie</option>
+                {availableOriginCities.map(c => (
+                  <option key={c.value} value={c.value}>
+                    {c.label_pl}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
           <div className={cardClass}>
             <h3 className={titleClass}>Preferencje</h3>
             <div className="space-y-2">
-              {[{ val: 'osobowy', label: 'Osobowy' }, { val: 'bus', label: 'Bus' }, { val: '', label: 'Bez znaczenia' }].map(opt => (
-                <label key={opt.val} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                  <input type="radio" name="transport" checked={params.transport === opt.val || (!params.transport && opt.val === '')} onChange={() => updateFilter('transport', opt.val)} className="w-4 h-4 text-[#0066cc] focus:ring-[#0066cc]" />
-                  {opt.label}
-                </label>
-              ))}
+              {[
+                { val: 'osobowy', label: 'Osobowy' }, 
+                { val: 'bus', label: 'Bus' }, 
+                { val: 'bez_znaczenia', label: 'Bez znaczenia' }
+              ].map(opt => {
+                const isChecked = params.transport === opt.val || (!params.transport && opt.val === 'bez_znaczenia')
+                
+                return (
+                  <label key={opt.val} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input 
+                      type="radio" 
+                      name="transport" 
+                      checked={isChecked} 
+                      onChange={() => updateFilter('transport', opt.val === 'bez_znaczenia' ? '' : opt.val)} 
+                      className="w-4 h-4 text-[#0066cc] focus:ring-[#0066cc]" 
+                    />
+                    {opt.label}
+                  </label>
+                )
+              })}
             </div>
             <div className="pt-2 border-t border-gray-100">
               <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">

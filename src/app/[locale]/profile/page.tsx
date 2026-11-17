@@ -18,18 +18,14 @@ async function ProfileContent({
   if (!user) redirect('/login')
 
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-  const { data: activities } = await supabase.from('dictionaries').select('*').eq('category', 'activity').eq('is_active', true).order('sort_order')
-  const { data: userInterests } = await supabase.from('user_interests').select('activity').eq('user_id', user.id)
   
-  const selectedInterests = userInterests?.map(i => i.activity) || []
   const { message } = await searchParams
 
   return (
     <div className="max-w-3xl mx-auto space-y-8 py-8">
       <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-3xl font-bold">Twój Profil</h1>
-          <p className="text-gray-500">Zarządzaj swoimi danymi i zainteresowaniami.</p>
+          <h1 className="text-3xl font-bold">Twój Profil</h1> 
         </div>
       </div>
 
@@ -60,7 +56,7 @@ async function ProfileContent({
           </form>
         </div>
 
-        {/* Правая колонка: Данные и Интересы */}
+        {/* Правая колонка: Данные */}
         <div className="md:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
           <form action={updateProfile} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -74,25 +70,10 @@ async function ProfileContent({
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">Moje zainteresowania (Otrzymuj powiadomienia)</label>
-              <div className="grid grid-cols-2 gap-3">
-                {activities?.map((act) => (
-                  <label key={act.id} className="flex items-center gap-2 p-2 border rounded-md hover:bg-gray-50 cursor-pointer transition-colors">
-                    <input 
-                      type="checkbox" 
-                      name="interests" 
-                      value={act.value}
-                      defaultChecked={selectedInterests.includes(act.value)}
-                      className="w-4 h-4 text-[#0071e3] rounded focus:ring-[#0071e3]"
-                    />
-                    <span className="text-sm text-gray-700">{act.label_pl}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
+            {/* СКРЫТЫЙ ИНПУТ: Всегда отправляем Narty в базу */}
+            <input type="hidden" name="interests" value="narty" />
 
-            <button type="submit" className="w-full py-3 bg-[#0071e3] text-white rounded-md font-medium hover:bg-[#0077ed] transition-colors shadow-sm">
+            <button type="submit" className="w-full py-3 bg-[#0071e3] text-white rounded-md font-medium hover:bg-[#0077ed] transition-colors shadow-sm mt-4">
               Zapisz zmiany
             </button>
           </form>

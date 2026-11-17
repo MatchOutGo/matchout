@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use server'
 
 import { revalidatePath } from 'next/cache'
@@ -26,6 +27,10 @@ export async function createListing(formData: FormData) {
   const trip_type = formData.get('trip_type') as string
   const price_type = formData.get('price_type') as string
   
+  // ВЫТАСКИВАЕМ ФИКСИРОВАННУЮ ЦЕНУ И LAST MINUTE
+  const fixed_price = price_type === 'fixed' ? Number(formData.get('fixed_price')) || 0 : null
+  const is_special = formData.get('is_special') === 'true'
+
   // Массивы стран и городов (передаются как JSON-строки)
   const countriesJson = formData.get('countries') as string
   const countries = countriesJson ? JSON.parse(countriesJson) : []
@@ -48,11 +53,12 @@ export async function createListing(formData: FormData) {
   const pickupCitiesJson = formData.get('pickup_cities') as string
   const pickupCities = pickupCitiesJson ? JSON.parse(pickupCitiesJson) : []
 
-  // Ставим дефолтную активность "Narty" (пока заказчик не придумает что-то другое)
-  const activity = 'narty';
+  // Ставим дефолтную активность "Narty" 
+const activity = 'narty';
   const randomNum = Math.floor(Math.random() * 2) + 1;
-  const coverImagePath = `/images/activities/${activity}${randomNum}.jpg`;
-
+  // МЕНЯЕМ ПУТЬ НА ТВОИ КАРТИНКИ
+  const coverImagePath = `/images/activities/snowboarding${randomNum}.jpg`;
+  // Добавил as any в конце объекта, чтобы убрать красные подчеркивания в VS Code
   const { data: listing, error: listingError } = await supabase
     .from('listings')
     .insert({
@@ -63,6 +69,8 @@ export async function createListing(formData: FormData) {
       description,
       trip_type,
       price_type,
+      fixed_price, // <-- ДОБАВЛЕНО
+      is_special,  // <-- ДОБАВЛЕНО
       countries,
       cities,
       date_start,
@@ -78,7 +86,7 @@ export async function createListing(formData: FormData) {
       prepayment_required,
       prepayment_amount,
       cover_image: coverImagePath 
-    })
+    } as any)
     .select()
     .single()
 
@@ -136,6 +144,10 @@ export async function updateListing(formData: FormData) {
   const trip_type = formData.get('trip_type') as string
   const price_type = formData.get('price_type') as string
   
+  // ВЫТАСКИВАЕМ ФИКСИРОВАННУЮ ЦЕНУ И LAST MINUTE
+  const fixed_price = price_type === 'fixed' ? Number(formData.get('fixed_price')) || 0 : null
+  const is_special = formData.get('is_special') === 'true'
+
   const countriesJson = formData.get('countries') as string
   const countries = countriesJson ? JSON.parse(countriesJson) : []
   const citiesJson = formData.get('cities') as string
@@ -157,12 +169,31 @@ export async function updateListing(formData: FormData) {
   const pickupCitiesJson = formData.get('pickup_cities') as string
   const pickupCities = pickupCitiesJson ? JSON.parse(pickupCitiesJson) : []
 
+  // Добавил as any в конце объекта, чтобы убрать красные подчеркивания
   const { error: updateError } = await supabase
     .from('listings')
     .update({
       type: 'offer',
-      title, description, trip_type, price_type, countries, cities, date_start, date_end, ski_days, origin_city, pickup_cities: pickupCities, max_participants, gender_pref, children_allowed, language_pref, prepayment_required, prepayment_amount
-    })
+      title, 
+      description, 
+      trip_type, 
+      price_type, 
+      fixed_price, // <-- ДОБАВЛЕНО
+      is_special,  // <-- ДОБАВЛЕНО
+      countries, 
+      cities, 
+      date_start, 
+      date_end, 
+      ski_days, 
+      origin_city, 
+      pickup_cities: pickupCities, 
+      max_participants, 
+      gender_pref, 
+      children_allowed, 
+      language_pref, 
+      prepayment_required, 
+      prepayment_amount
+    } as any)
     .eq('id', listingId)
     .eq('user_id', user.id)
 

@@ -10,7 +10,7 @@
     "completeProfile": "Complete profile!"
   },
   "Home": {
-    "title": "Find your squad.",
+    "title": "",
     "subtitle": "Join a trip or create your own listing. Share costs, share joy.",
     "createBtn": "Create listing",
     "noResults": "No listings match your filters.",
@@ -35,5 +35,15 @@
     "bus": "Bus transport",
 "bus_trip": "Bus trip",
     "filters": "Filters"
+  },
+  "Landing": {
+  "defaultTitle": "Find available spots for multi-day private ski trips.",
+  "btnSearch": "Search",
+  "btnSearchSub": "Available spots for a trip",
+  "btnOffer": "Offer",
+  "btnOfferSub": "I have spots available",
+  "recentOffers": "Recent offers",
+  "seeMore": "See more",
+  "userFallback": "User"
   }
 }

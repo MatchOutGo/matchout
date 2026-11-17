@@ -3,7 +3,7 @@
 import { Suspense } from 'react';
 import { createClient } from '@/utils/supabase/server';
 import { connection } from 'next/server';
-import { getLocale } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { Link } from '@/i18n/routing';
 import { Search, PlusCircle, ArrowRight, MapPin, Calendar, User } from 'lucide-react';
 
@@ -14,18 +14,21 @@ async function LandingContent() {
   await connection();
   const supabase = await createClient();
   const locale = await getLocale();
+  const t = await getTranslations('Landing'); // Берем переводы для лендинга
   
   // 1. Получаем настройки лендинга
   const { data: settings } = await supabase.from('site_settings').select('*');
   
   const textKey = locale === 'pl' ? 'landing_text_pl' : 'landing_text_en';
-  const landingText = settings?.find(s => s.key === textKey)?.value || 'Wyszukiwarka wolnych miejsc...';
+  const landingText = settings?.find(s => s.key === textKey)?.value || t('defaultTitle');
   
   const customBannerUrl = settings?.find(s => s.key === 'landing_banner_url')?.value;
   
+  // Определяем ключ для строчек в зависимости от языка
+  const extraLinesKey = locale === 'pl' ? 'landing_extra_lines' : 'landing_extra_lines_en';
   let extraLines: ExtraLine[] = [];
   try {
-    const rawExtra = settings?.find(s => s.key === 'landing_extra_lines')?.value;
+    const rawExtra = settings?.find(s => s.key === extraLinesKey)?.value;
     if (rawExtra) extraLines = JSON.parse(rawExtra);
   } catch (e) {
     console.error("Ошибка парсинга JSON строк", e);
@@ -33,7 +36,7 @@ async function LandingContent() {
 
   const activeLines = extraLines.filter(l => l.isActive);
 
-  // 2. Получаем активности для правильных названий на карточках
+  // 2. Получаем активности
   const { data: activitiesData } = await supabase.from('dictionaries').select('*').eq('category', 'activity').eq('is_active', true);
   const activities = (activitiesData as DictItem[]) || [];
 
@@ -48,24 +51,12 @@ async function LandingContent() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[80vh] text-center px-4 overflow-hidden py-12">
       
-      {/* БЛОК БАННЕРА */}
       <div className="w-full max-w-5xl mb-10 overflow-hidden rounded-[2rem] shadow-2xl anim-fade-in bg-gray-100">
         {customBannerUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img 
-            src={customBannerUrl} 
-            alt="Snow&Go Banner" 
-            className="w-full h-[200px] md:h-[300px] object-cover object-center" 
-          />
+          <img src={customBannerUrl} alt="Snow&Go Banner" className="w-full h-[200px] md:h-[300px] object-cover object-center" />
         ) : (
-          <video 
-            src="/banner.mp4" 
-            autoPlay 
-            loop 
-            muted 
-            playsInline 
-            className="w-full h-[200px] md:h-[300px] object-cover object-center"
-          />
+          <video src="/banner.mp4" autoPlay loop muted playsInline className="w-full h-[200px] md:h-[300px] object-cover object-center" />
         )}
       </div>
 
@@ -83,8 +74,8 @@ async function LandingContent() {
           <div className="w-16 h-16 rounded-full bg-[#0066cc] flex items-center justify-center text-white group-hover:scale-110 transition-transform shadow-sm">
             <Search className="w-8 h-8" />
           </div>
-          <span className="text-2xl font-bold text-[#0066cc]">Szukam</span>
-          <span className="text-sm text-[#0066cc]/80 font-medium">Wolnych miejsc na wyjazd</span>
+          <span className="text-2xl font-bold text-[#0066cc]">{t('btnSearch')}</span>
+          <span className="text-sm text-[#0066cc]/80 font-medium">{t('btnSearchSub')}</span>
         </Link>
 
         {/* КНОПКА OFERUJĘ */}
@@ -95,8 +86,8 @@ async function LandingContent() {
           <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center text-white group-hover:scale-110 transition-transform">
             <PlusCircle className="w-8 h-8" />
           </div>
-          <span className="text-2xl font-bold text-white">Oferuję</span>
-          <span className="text-sm text-blue-100 font-medium">Mam wolne miejsca na wyjazd</span>
+          <span className="text-2xl font-bold text-white">{t('btnOffer')}</span>
+          <span className="text-sm text-blue-100 font-medium">{t('btnOfferSub')}</span>
         </Link>
       </div>
 
@@ -124,9 +115,9 @@ async function LandingContent() {
       {recentListings && recentListings.length > 0 && (
         <div className="w-full max-w-5xl anim-fade-in" style={{ animationDelay: '0.8s' }}>
           <div className="flex flex-col md:flex-row justify-between items-center mb-6 border-b border-gray-200 pb-4 gap-4">
-            <h2 className="text-2xl font-bold text-gray-900">Ostatnie oferty</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{t('recentOffers')}</h2>
             <Link href="/listings" className="text-[#0066cc] font-semibold hover:text-[#004c99] transition-colors flex items-center gap-2 bg-indigo-50 px-5 py-2.5 rounded-full">
-              Zobacz więcej <ArrowRight className="w-5 h-5" />
+              {t('seeMore')} <ArrowRight className="w-5 h-5" />
             </Link>
           </div>
           
@@ -145,11 +136,7 @@ async function LandingContent() {
                 >
                   <div className="relative h-40 w-full bg-gray-100 overflow-hidden">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img 
-                      src={listing.cover_image || `/images/activities/${listing.activity}1.jpg`} 
-                      alt={listing.title} 
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                    />
+                    <img src={listing.cover_image || `/images/activities/${listing.activity}1.jpg`} alt={listing.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-full text-[11px] font-bold text-gray-900 shadow-sm uppercase tracking-wide">
                       {activityLabel}
                     </div>
@@ -173,7 +160,7 @@ async function LandingContent() {
                       </div>
                       <div className="flex items-center gap-2">
                         <User className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                        <span>{author?.first_name || 'Użytkownik'}</span>
+                        <span>{author?.first_name || t('userFallback')}</span>
                       </div>
                     </div>
                   </div>

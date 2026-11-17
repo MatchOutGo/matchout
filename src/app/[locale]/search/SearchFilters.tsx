@@ -1,30 +1,55 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from '@/i18n/routing'
 import { Search, RotateCcw, MountainSnow, MapPin } from 'lucide-react'
 
 type DictItem = { value: string; label_pl: string; parent_value?: string; is_resort?: boolean }
 
+const FAMOUS_POLISH_CITIES = [
+  'Warszawa', 'Kraków', 'Łódź', 'Wrocław', 'Poznań', 
+  'Gdańsk', 'Szczecin', 'Bydgoszcz', 'Lublin', 'Białystok', 
+  'Katowice', 'Gdynia', 'Częstochowa', 'Radom', 'Rzeszów', 
+  'Toruń', 'Sosnowiec', 'Kielce', 'Gliwice', 'Olsztyn'
+]
+
+// Убрали activities из пропсов
 export default function SearchFilters({ 
-  activities, countries, cities
+  countries, cities
 }: { 
-  activities: DictItem[], countries: DictItem[], cities: DictItem[]
+  countries: DictItem[], cities: DictItem[]
 }) {
   const router = useRouter()
   
-  const [form, setForm] = useState({
-    activity: 'narty', destCountry: '', destCity: '', originCountry: '', originCity: '',
-    dateStart: '', dateEnd: '', transport: '', priceType: ''
-  })
+  const [today, setToday] = useState('')
 
-  // В "Dokąd" показываем всё (и города, и курорты)
-  const availableDestCities = cities.filter(c => !form.destCountry || c.parent_value === form.destCountry)
-  
-  // В "Skąd" показываем ТОЛЬКО города (исключаем is_resort)
-  const availableOriginCities = cities.filter(c => 
-    (!form.originCountry || c.parent_value === form.originCountry) && !c.is_resort
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setToday(new Date().toLocaleDateString('sv-SE'))
+  }, [])
+
+  const [form, setForm] = useState({
+    activity: 'narty', 
+    destCountry: '', 
+    destCity: '', 
+    originCity: '',
+    dateStart: '', 
+    dateEnd: '', 
+    transport: 'bez_znaczenia', 
+    priceType: ''
+  })
+ 
+
+  const polandValue = countries.find(c => c.label_pl === 'Polska')?.value || 'PL'
+
+  const availableDestCities = cities.filter(c => 
+    c.is_resort && (!form.destCountry || c.parent_value === form.destCountry)
   )
+  
+  const availableOriginCities = cities
+    .filter(c => c.parent_value === polandValue && !c.is_resort)
+    .filter(c => FAMOUS_POLISH_CITIES.includes(c.label_pl))
+    .sort((a, b) => a.label_pl.localeCompare(b.label_pl))
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,7 +57,9 @@ export default function SearchFilters({
     if (form.activity) params.append('activity', form.activity)
     if (form.dateStart) params.append('dateStart', form.dateStart)
     if (form.dateEnd) params.append('dateEnd', form.dateEnd)
-    if (form.transport) params.append('transport', form.transport)
+    
+    if (form.transport && form.transport !== 'bez_znaczenia') params.append('transport', form.transport)
+    
     if (form.priceType) params.append('priceType', form.priceType)
     if (form.destCountry) params.append('countries', form.destCountry)
     if (form.destCity) params.append('cities', form.destCity)
@@ -41,7 +68,10 @@ export default function SearchFilters({
   }
 
   const handleReset = () => {
-    setForm({ activity: 'narty', destCountry: '', destCity: '', originCountry: '', originCity: '', dateStart: '', dateEnd: '', transport: '', priceType: '' })
+    setForm({ 
+      activity: 'narty', destCountry: '', destCity: '', originCity: '', 
+      dateStart: '', dateEnd: '', transport: 'bez_znaczenia', priceType: '' 
+    })
     router.push('/listings') 
   }
 
@@ -49,6 +79,12 @@ export default function SearchFilters({
   const labelClass = "flex items-center gap-1.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-2"
   const cardClass = "bg-white p-6 md:p-8 rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.04)] space-y-6"
   const titleClass = "text-xl font-semibold tracking-tight border-b border-gray-100 pb-4"
+
+  const transportOptions = [
+    { value: 'osobowy', label: 'Osobowy' },
+    { value: 'bus', label: 'Bus' },
+    { value: 'bez_znaczenia', label: 'Bez znaczenia' },
+  ]
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -64,11 +100,37 @@ export default function SearchFilters({
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className={labelClass}>Mogę wyjechać od</label>
-            <input type="date" value={form.dateStart} onChange={(e) => setForm({...form, dateStart: e.target.value})} className={inputClass} />
+            <div className="relative">
+              <input 
+                type="date" 
+                min={today}
+                value={form.dateStart} 
+                onChange={(e) => setForm({...form, dateStart: e.target.value})} 
+                className={`${inputClass} ${!form.dateStart ? 'text-transparent' : 'text-gray-900'}`} 
+              />
+              {!form.dateStart && (
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[15px] pointer-events-none">
+                  Dowolna data
+                </span>
+              )}
+            </div>
           </div>
           <div>
             <label className={labelClass}>Muszę wrócić do</label>
-            <input type="date" value={form.dateEnd} onChange={(e) => setForm({...form, dateEnd: e.target.value})} className={inputClass} />
+            <div className="relative">
+              <input 
+                type="date" 
+                min={form.dateStart || today}
+                value={form.dateEnd} 
+                onChange={(e) => setForm({...form, dateEnd: e.target.value})} 
+                className={`${inputClass} ${!form.dateEnd ? 'text-transparent' : 'text-gray-900'}`} 
+              />
+              {!form.dateEnd && (
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[15px] pointer-events-none">
+                  Dowolna data
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -85,13 +147,13 @@ export default function SearchFilters({
           </div>
           <div>
             <label className={labelClass}>
-              <MountainSnow className="w-3.5 h-3.5 text-[#0066cc]" /> Miejscowość / Ośrodek
+              <MountainSnow className="w-3.5 h-3.5 text-[#0066cc]" /> Miejscowość
             </label>
             <select value={form.destCity} onChange={(e) => setForm({...form, destCity: e.target.value})} disabled={!form.destCountry} className={`${inputClass} ${!form.destCountry ? 'opacity-50 cursor-not-allowed bg-gray-100' : ''}`}>
               <option value="">Wszystkie</option>
               {availableDestCities.map(c => (
                 <option key={c.value} value={c.value}>
-                  {c.label_pl}{c.is_resort ? '\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0 OŚRODEK' : ''}
+                  {c.label_pl} 🚡
                 </option>
               ))}
             </select>
@@ -101,27 +163,18 @@ export default function SearchFilters({
 
       <div className={cardClass}>
         <h2 className={titleClass}>Skąd</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className={labelClass}>Kraj</label>
-            <select value={form.originCountry} onChange={(e) => setForm({...form, originCountry: e.target.value, originCity: ''})} className={inputClass}>
-              <option value="">Wszystkie</option>
-              {countries.map(c => <option key={c.value} value={c.value}>{c.label_pl}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className={labelClass}>
-              <MapPin className="w-3.5 h-3.5 text-[#0066cc]" /> Miejscowość (Tylko miasta)
-            </label>
-            <select value={form.originCity} onChange={(e) => setForm({...form, originCity: e.target.value})} disabled={!form.originCountry} className={`${inputClass} ${!form.originCountry ? 'opacity-50 cursor-not-allowed bg-gray-100' : ''}`}>
-              <option value="">Wszystkie</option>
-              {availableOriginCities.map(c => (
-                <option key={c.value} value={c.value}>
-                  {c.label_pl}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div>
+          <label className={labelClass}>
+            <MapPin className="w-3.5 h-3.5 text-[#0066cc]" /> Miejscowość (Polska)
+          </label>
+          <select value={form.originCity} onChange={(e) => setForm({...form, originCity: e.target.value})} className={inputClass}>
+            <option value="">Wszystkie</option>
+            {availableOriginCities.map(c => (
+              <option key={c.value} value={c.value}>
+                {c.label_pl}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -131,10 +184,17 @@ export default function SearchFilters({
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">Preferowany transport</label>
             <div className="flex flex-wrap gap-4">
-              {['Osobowy', 'Bus', 'Bez znaczenia'].map((t) => (
-                <label key={t} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                  <input type="radio" name="transport" value={t} checked={form.transport === t} onChange={(e) => setForm({...form, transport: e.target.value})} className="w-4 h-4 text-[#0066cc] focus:ring-[#0066cc]" />
-                  {t}
+              {transportOptions.map((t) => (
+                <label key={t.value} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                  <input 
+                    type="radio" 
+                    name="transport" 
+                    value={t.value} 
+                    checked={form.transport === t.value} 
+                    onChange={(e) => setForm({...form, transport: e.target.value})} 
+                    className="w-4 h-4 text-[#0066cc] focus:ring-[#0066cc]" 
+                  />
+                  {t.label}
                 </label>
               ))}
             </div>

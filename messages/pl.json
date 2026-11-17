@@ -35,5 +35,15 @@
     "bus": "Transport busem",
 "bus_trip": "Wyjazd busem",
     "filters": "Filtry"
+  },
+  "Landing": {
+    "defaultTitle": "Wyszukiwarka wolnych miejsc na kilkudniowe-prywatne wyjazdy na narty.",
+    "btnSearch": "Szukam",
+    "btnSearchSub": "Wolnych miejsc na wyjazd",
+    "btnOffer": "Oferuję",
+    "btnOfferSub": "Mam wolne miejsca na wyjazd",
+    "recentOffers": "Ostatnie oferty",
+    "seeMore": "Zobacz więcej",
+    "userFallback": "Użytkownik"
   }
 }

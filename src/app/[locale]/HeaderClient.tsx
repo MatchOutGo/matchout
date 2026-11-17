@@ -61,11 +61,7 @@ export default function HeaderClient({
             <Link href="/profile" className="hidden sm:flex items-center gap-2 text-[13px] font-medium text-red-600 bg-red-50 px-3 py-1.5 rounded-full animate-pulse border border-red-100">
               {t('completeProfile')}
             </Link>
-          ) : (
-            <Link href="/listings/create" className="hidden sm:block text-[14px] font-medium text-gray-900 bg-gray-100 hover:bg-gray-200 px-4 py-1.5 rounded-full transition-colors">
-              {t('create')}
-            </Link>
-          )}
+          ) : null}
           
           <Link href="/chats" className="relative text-gray-500 hover:text-gray-900 transition-colors">
             <MessageCircle className="w-5 h-5" />
@@ -113,7 +109,7 @@ export default function HeaderClient({
           >
             {locale === 'pl' ? 'EN' : 'PL'}
           </button>
- 
+
           <Link 
             href="/login" 
             className="text-[14px] font-medium text-white bg-[#0066cc] hover:bg-[#004c99] px-6 py-2.5 rounded-full transition-colors shadow-sm"

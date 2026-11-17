@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createListing, updateListing } from './actions'
-import { Loader2, MapPin, X, MountainSnow } from 'lucide-react'
+import { Loader2, MapPin, X, MountainSnow, Flame } from 'lucide-react'
 import { useFormStatus } from 'react-dom'
 import CustomSelect from '@/components/CustomSelect'
 import CitySelect from '@/components/CitySelect'
@@ -15,6 +15,7 @@ type InitialListingData = {
   date_end?: string
   trip_type?: string
   price_type?: string
+  fixed_price?: number
   countries?: string[]
   cities?: string[]
   ski_days?: number
@@ -27,7 +28,28 @@ type InitialListingData = {
   gender_pref?: string
   children_allowed?: string
   language_pref?: string
+  is_special?: boolean
 }
+
+const TRIP_TYPE_OPTIONS = [
+  { value: 'bus', label: 'Bus' },
+  { value: 'osobowy', label: 'Osobowy' },
+  { value: 'bez_znaczenia', label: 'Bez znaczenia' },
+] as const
+
+const normalizeTripType = (value?: string) => {
+  if (value === 'bus' || value === 'osobowy' || value === 'bez_znaczenia') return value
+  if (value === 'Bus') return 'bus'
+  if (value === 'Osobowy' || value === 'car_shared' || value === 'car') return 'osobowy'
+  return 'bez_znaczenia'
+}
+
+const FAMOUS_POLISH_CITIES = [
+  'Warszawa', 'Kraków', 'Łódź', 'Wrocław', 'Poznań', 
+  'Gdańsk', 'Szczecin', 'Bydgoszcz', 'Lublin', 'Białystok', 
+  'Katowice', 'Gdynia', 'Częstochowa', 'Radom', 'Rzeszów', 
+  'Toruń', 'Sosnowiec', 'Kielce', 'Gliwice', 'Olsztyn'
+]
 
 function SubmitButton({ isEdit }: { isEdit: boolean }) {
   const { pending } = useFormStatus();
@@ -40,11 +62,11 @@ function SubmitButton({ isEdit }: { isEdit: boolean }) {
 }
 
 export default function CreateListingForm({ 
-  cities, countries, tripTypes, priceTypes, initialData, listingId, showGender = false, showChildren = false
+  cities, countries, priceTypes, initialData, listingId, showGender = false, showChildren = false
 }: { 
   cities: DictItem[], 
   countries: DictItem[],
-  tripTypes: DictItem[],
+  tripTypes?: DictItem[],
   priceTypes: DictItem[],
   initialData?: InitialListingData,
   initialCosts?: unknown[],
@@ -52,16 +74,23 @@ export default function CreateListingForm({
   showGender?: boolean,
   showChildren?: boolean
 }) {
+  const [today, setToday] = useState('') // <-- Фикс гидратации
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setToday(new Date().toLocaleDateString('sv-SE'))
+  }, [])
+
   const [dateStart, setDateStart] = useState(initialData?.date_start ? initialData.date_start.split('T')[0] : '')
   const [dateEnd, setDateEnd] = useState(initialData?.date_end ? initialData.date_end.split('T')[0] : '')
   
-  const [tripType, setTripType] = useState(initialData?.trip_type || tripTypes[0]?.value || 'car_shared')
-  const [priceType, setPriceType] = useState(initialData?.price_type || 'shared')
+  const [tripType, setTripType] = useState(normalizeTripType(initialData?.trip_type))
+  const [priceType, setPriceType] = useState(initialData?.price_type || 'any')
+  const [fixedPrice, setFixedPrice] = useState(initialData?.fixed_price?.toString() || '')
   
   const [destCountry, setDestCountry] = useState<string>('')
   const [destCity, setDestCity] = useState<string>('')
   
-  const [originCountry, setOriginCountry] = useState<string>('')
   const [originCity, setOriginCity] = useState(initialData?.origin_city || '')
   
   const [skiDays, setSkiDays] = useState(initialData?.ski_days || 1)
@@ -74,22 +103,24 @@ export default function CreateListingForm({
   
   const [prepaymentRequired, setPrepaymentRequired] = useState(initialData?.prepayment_required || false)
   const [prepaymentAmount, setPrepaymentAmount] = useState(initialData?.prepayment_amount?.toString() || '')
-
-  // Фильтруем города для "Dokąd" (все)
-  const availableDestCities = cities.filter(c => !destCountry || c.parent_value === destCountry)
   
-  // Фильтруем города для "Skąd" (ТОЛЬКО НЕ курорты)
-  const availableOriginCities = cities.filter(c => 
-    (!originCountry || c.parent_value === originCountry) && !c.is_resort
-  )
+  const [isSpecial, setIsSpecial] = useState(initialData?.is_special || false)
 
-  // Автокомплит для мест сбора (ТОЛЬКО НЕ курорты)
+  const polandValue = countries.find(c => c.label_pl === 'Polska')?.value || 'PL'
+
+  const availableDestCities = cities.filter(c => c.is_resort && (!destCountry || c.parent_value === destCountry))
+
+  const availableOriginCities = cities
+    .filter(c => c.parent_value === polandValue && !c.is_resort)
+    .filter(c => FAMOUS_POLISH_CITIES.includes(c.label_pl))
+    .sort((a, b) => a.label_pl.localeCompare(b.label_pl))
+
   const filteredPickupCities = cities.filter(city => 
     city.label_pl.toLowerCase().includes(pickupInput.toLowerCase()) && 
     pickupInput.length > 1 && 
     !pickupCities.includes(city.label_pl) &&
-    (!originCountry || city.parent_value === originCountry) &&
-    !city.is_resort // <--- Исключаем курорты
+    city.parent_value === polandValue &&
+    !city.is_resort
   )
 
   const addPickupCity = (cityName: string) => {
@@ -113,6 +144,7 @@ export default function CreateListingForm({
       <input type="hidden" name="costs" value="[]" />
       <input type="hidden" name="max_participants" value="4" />
       
+      <input type="hidden" name="is_special" value={isSpecial.toString()} />
       {!showGender && <input type="hidden" name="gender_pref" value={initialData?.gender_pref || 'any'} />}
       {!showChildren && <input type="hidden" name="children_allowed" value={initialData?.children_allowed || 'yes'} />}
       <input type="hidden" name="language_pref" value="pl" />
@@ -133,8 +165,8 @@ export default function CreateListingForm({
 
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">Rodzaj wyjazdu</label>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 bg-[#f5f5f7] p-4 rounded-2xl">
-            {tripTypes.map((type) => (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-[#f5f5f7] p-4 rounded-2xl">
+            {TRIP_TYPE_OPTIONS.map((type) => (
               <label key={type.value} className="flex items-center gap-3 cursor-pointer">
                 <input 
                   type="radio" 
@@ -144,7 +176,7 @@ export default function CreateListingForm({
                   onChange={(e) => setTripType(e.target.value)}
                   className="w-4 h-4 text-[#0066cc] focus:ring-[#0066cc]"
                 />
-                <span className="text-sm font-medium text-gray-700">{type.label_pl}</span>
+                <span className="text-sm font-medium text-gray-700">{type.label}</span>
               </label>
             ))}
           </div>
@@ -153,11 +185,11 @@ export default function CreateListingForm({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-gray-100">
           <div>
             <label className={labelClass}>Data wyjazdu</label>
-            <input name="date_start" type="date" className={inputClass} value={dateStart} onChange={(e) => { setDateStart(e.target.value); if (dateEnd && e.target.value > dateEnd) setDateEnd('') }} />
+            <input name="date_start" type="date" min={today} className={inputClass} value={dateStart} onChange={(e) => { setDateStart(e.target.value); if (dateEnd && e.target.value > dateEnd) setDateEnd('') }} />
           </div>
           <div>
             <label className={labelClass}>Data przyjazdu</label>
-            <input name="date_end" type="date" className={inputClass} value={dateEnd} min={dateStart} onChange={(e) => setDateEnd(e.target.value)} disabled={!dateStart} />
+            <input name="date_end" type="date" className={inputClass} value={dateEnd} min={dateStart || today} onChange={(e) => setDateEnd(e.target.value)} disabled={!dateStart} />
           </div>
           <div>
             <label className={labelClass}>Ilość dni na nartach</label>
@@ -167,7 +199,7 @@ export default function CreateListingForm({
       </div>
 
       <div className={cardClass}>
-        <h2 className={titleClass}>Gdzie jedziemy? (Dokąd)</h2>
+        <h2 className={titleClass}>Gdzie jedziemy</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className={labelClass}>Kraj</label>
@@ -192,27 +224,17 @@ export default function CreateListingForm({
       </div>
 
       <div className={cardClass}>
-        <h2 className={titleClass}>Skąd wyjeżdżamy?</h2>
+        <h2 className={titleClass}>Skąd wyjeżdżamy</h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className={labelClass}>Kraj (Główny)</label>
-            <select value={originCountry} onChange={(e) => { setOriginCountry(e.target.value); setOriginCity(''); }} className={inputClass}>
-              <option value="">Wybierz kraj...</option>
-              {countries.map(c => <option key={c.value} value={c.value}>{c.label_pl}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className={labelClass}>Miasto (Główne)</label>
-            <CitySelect 
-              value={originCity}
-              onChange={setOriginCity}
-              options={availableOriginCities}
-              placeholder="Wybierz miasto..."
-              disabled={!originCountry}
-            />
-            <input type="hidden" name="origin_city" value={originCity} />
-          </div>
+        <div>
+          <label className={labelClass}>Miasto</label>
+          <CitySelect 
+            value={originCity}
+            onChange={setOriginCity}
+            options={availableOriginCities}
+            placeholder="Wybierz miasto..."
+          />
+          <input type="hidden" name="origin_city" value={originCity} />
         </div>
 
         <div className="pt-4 border-t border-gray-100">
@@ -265,23 +287,41 @@ export default function CreateListingForm({
           <label className="block text-sm font-semibold text-gray-700 mb-2">Typ ceny</label>
           <div className="space-y-2 bg-[#f5f5f7] p-4 rounded-2xl">
             {priceTypes.map((type) => (
-              <label key={type.value} className="flex items-center gap-3 cursor-pointer">
-                <input 
-                  type="radio" 
-                  name="price_type" 
-                  value={type.value} 
-                  checked={priceType === type.value}
-                  onChange={(e) => setPriceType(e.target.value)}
-                  className="w-4 h-4 text-[#0066cc] focus:ring-[#0066cc]"
-                />
-                <span className="text-sm font-medium text-gray-700">{type.label_pl}</span>
-              </label>
+              <div key={type.value} className="flex items-center justify-between gap-4">
+                <label className="flex items-center gap-3 cursor-pointer flex-1">
+                  <input 
+                    type="radio" 
+                    name="price_type" 
+                    value={type.value} 
+                    checked={priceType === type.value}
+                    onChange={(e) => setPriceType(e.target.value)}
+                    className="w-4 h-4 text-[#0066cc] focus:ring-[#0066cc]"
+                  />
+                  <span className="text-sm font-medium text-gray-700">{type.label_pl}</span>
+                </label>
+
+                {priceType === 'fixed' && type.value === 'fixed' && (
+                  <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-2">
+                    <input 
+                      name="fixed_price" 
+                      type="number" 
+                      min="0" 
+                      required 
+                      value={fixedPrice} 
+                      onChange={(e) => setFixedPrice(e.target.value)} 
+                      placeholder="Kwota" 
+                      className="w-28 bg-white border border-gray-200 rounded-xl px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-[#0066cc]/50" 
+                    />
+                    <span className="text-gray-500 text-sm font-medium">zł</span>
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         </div>
 
         {(showGender || showChildren) && (
-          <div className={`grid grid-cols-1 ${showGender && showChildren ? 'md:grid-cols-2' : 'md:grid-cols-1'} gap-6`}>
+          <div className={`grid grid-cols-1 ${showGender && showChildren ? 'md:grid-cols-2' : 'md:grid-cols-1'} gap-6 pt-2`}>
             {showGender && (
               <div>
                 <label className={labelClass}>Dla kogo miejsce?</label>
@@ -309,6 +349,25 @@ export default function CreateListingForm({
             </div>
           )}
         </div>
+
+        <div className="bg-orange-50 p-5 rounded-2xl border border-orange-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-4">
+          <div>
+            <p className="font-semibold text-orange-900 flex items-center gap-2">
+              <Flame className="w-5 h-5 text-orange-500" /> Oferta Last Minute / Promocja
+            </p>
+            <p className="text-sm text-orange-700/80 mt-1">Zaznacz, jeśli chcesz wyróżnić tę ofertę na stronie głównej.</p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input 
+              type="checkbox" 
+              checked={isSpecial} 
+              onChange={(e) => setIsSpecial(e.target.checked)} 
+              className="sr-only peer" 
+            />
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+          </label>
+        </div>
+
       </div>
 
       <div className={cardClass}>

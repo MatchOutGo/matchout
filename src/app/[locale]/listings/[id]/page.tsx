@@ -5,6 +5,7 @@ import { connection } from 'next/server';
 import Link from 'next/link';
 import { MapPin, Calendar, ArrowLeft, Phone, MessageCircle, Edit, Trash2, Bus } from 'lucide-react';
 import { joinTrip, deleteListing } from './actions';
+import ReportButton from '@/components/ReportButton'; // <-- Импортируем нашу кнопку
 
 type Cost = { id: string; title: string; amount: number; is_shared: boolean };
 
@@ -222,6 +223,13 @@ async function ListingDetails({ params, searchParams }: { params: Promise<{ id: 
                         <Trash2 className="w-3.5 h-3.5" /> Usuń
                       </button>
                     </form>
+                  </div>
+                )}
+
+                {/* КНОПКА ЖАЛОБЫ (DSA) - Показывается всем, кроме организатора */}
+                {!isOrganizer && (
+                  <div className="pt-4 mt-4 border-t border-gray-100 flex justify-center">
+                    <ReportButton listingId={id} />
                   </div>
                 )}
               </div>

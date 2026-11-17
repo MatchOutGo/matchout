@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { ChevronDown } from 'lucide-react'
+import { CableCar } from 'lucide-react'
 
 type DictItem = { value: string; label_pl: string; is_resort?: boolean }
 
@@ -66,7 +67,7 @@ export default function CitySelect({
               <span className="truncate">{opt.label_pl}</span>
               {opt.is_resort && (
                 <span className="text-[10px] text-gray-400 font-semibold tracking-wider shrink-0 uppercase">
-                  Ośrodek
+                    <CableCar className="w-4 h-4 text-gray-400" />
                 </span>
               )}
             </div>
