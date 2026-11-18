@@ -4,9 +4,8 @@ import { Suspense } from 'react';
 import { createClient } from '@/utils/supabase/server';
 import { Link } from '@/i18n/routing'; 
 import { connection } from 'next/server';
-import { MapPin, Calendar, User, Bus, SlidersHorizontal, Flame } from 'lucide-react'; // <-- ДОБАВИЛИ Flame
+import { MapPin, Calendar, User, Bus } from 'lucide-react';
 import FilterSidebar from '@/components/FilterSidebar';
-import SortSelect from '@/components/SortSelect';
 import { getTranslations, getLocale } from 'next-intl/server';
 
 type SearchParams = {
@@ -23,7 +22,7 @@ type SearchParams = {
 
 async function ListingsList({ searchParams, locale, activities }: { searchParams: Promise<SearchParams>, locale: string, activities: any[] }) {
   const params = await searchParams;
-  const { activity, countries, cities, dateStart, dateEnd, transport, priceType, origin, sort } = params;
+  const { activity, countries, cities, dateStart, dateEnd, transport, priceType, origin } = params;
   const supabase = await createClient();
 
   let query = (supabase
@@ -31,33 +30,29 @@ async function ListingsList({ searchParams, locale, activities }: { searchParams
     .select(`*, profiles!user_id (first_name, avatar_url)`)
     .eq('type', 'offer')
     .eq('status', 'published')
-    .order('is_special', { ascending: false }); // <-- СНАЧАЛА ВЫВОДИМ LAST MINUTE
-
-  // Логика сортировки
-  if (sort === 'price_asc') {
-    query = query.order('fixed_price', { ascending: true, nullsFirst: false });
-  } else if (sort === 'price_desc') {
-    query = query.order('fixed_price', { ascending: false, nullsFirst: false });
-  } else if (sort === 'date_asc') {
-    query = query.order('date_start', { ascending: true });
-  } else {
-    query = query.order('created_at', { ascending: false });
-  }
+    .order('price_type', { ascending: false })
+    .order('created_at', { ascending: false });
 
   if (activity) query = query.eq('activity', activity);
+  
   if (countries) {
     const countryArr = countries.split(',');
     if (countryArr.length > 0) query = query.overlaps('countries', countryArr);
   }
+  
   if (cities) {
     const cityArr = cities.split(',');
     if (cityArr.length > 0) query = query.overlaps('cities', cityArr);
   }
+  
   if (dateStart) query = query.gte('date_end', dateStart);
   if (dateEnd) query = query.lte('date_start', dateEnd);
+  
   if (transport === 'osobowy') query = query.ilike('trip_type', '%car%');
   if (transport === 'bus') query = query.ilike('trip_type', '%bus%');
+  
   if (priceType === 'shared') query = query.eq('price_type', 'shared');
+
   if (origin) {
     query = query.or(`origin_city.ilike.%${origin}%,pickup_cities.cs.["${origin}"]`);
   }
@@ -81,33 +76,43 @@ async function ListingsList({ searchParams, locale, activities }: { searchParams
         const activityLabel = activities.find(a => a.value === listing.activity)?.label_pl || listing.activity;
         const author = Array.isArray(listing.profiles) ? listing.profiles[0] : listing.profiles;
         const authorName = author?.first_name || 'Użytkownik';
+        
         const dateStartFormatted = listing.date_start ? new Date(listing.date_start).toLocaleDateString(locale === 'pl' ? 'pl-PL' : 'en-GB', { day: 'numeric', month: 'short' }) : '';
         const dateEndFormatted = listing.date_end ? new Date(listing.date_end).toLocaleDateString(locale === 'pl' ? 'pl-PL' : 'en-GB', { day: 'numeric', month: 'short' }) : '';
+
+        // ЛОГИКА LAST MINUTE: Если до выезда меньше 7 дней
+        const isLastMinute = listing.date_start && (new Date(listing.date_start).getTime() - new Date().getTime()) / (1000 * 3600 * 24) <= 7;
 
         return (
           <Link 
             href={`/listings/${listing.id}`} locale={locale} key={listing.id} 
-            className="bg-white rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all duration-300 cursor-pointer flex flex-col overflow-hidden group border border-transparent hover:border-gray-200"
+            className="bg-white rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all duration-300 cursor-pointer flex flex-col overflow-hidden group"
           >
             <div className="relative h-48 w-full bg-gray-100 overflow-hidden">
-              <img src={listing.cover_image || `/images/activities/snowboarding1.jpg`} alt={listing.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={listing.cover_image || `/images/activities/${listing.activity}1.jpg`} alt={listing.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
               
               <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-md px-2.5 py-1 rounded-full text-[11px] font-bold text-gray-900 shadow-sm uppercase tracking-wide">
                 {activityLabel}
               </div>
 
-              {/* ЗАМЕНИЛИ ЭМОДЗИ НА ИКОНКУ */}
-              {listing.is_special && (
-                <div className="absolute top-3 right-3 bg-orange-500 text-white px-2.5 py-1 rounded-full text-[11px] font-bold shadow-sm flex items-center gap-1 animate-pulse">
-                  <Flame className="w-3 h-3 fill-white" /> LAST MINUTE
-                </div>
-              )}
+              {/* КОНТЕЙНЕР ДЛЯ ПЛАШЕК В ПРАВОМ ВЕРХНЕМ УГЛУ */}
+              <div className="absolute top-3 right-3 flex flex-col items-end gap-2">
+                
+                {/* МИГАЮЩАЯ ПЛАШКА LAST MINUTE */}
+                {isLastMinute && (
+                  <div className="bg-red-500 text-white px-2.5 py-1 rounded-full text-[11px] font-bold shadow-sm flex items-center gap-1 animate-pulse">
+                    🔥 LAST MINUTE
+                  </div>
+                )}
 
-              {listing.trip_type?.includes('bus') && !listing.is_special && (
-                <div className="absolute top-3 right-3 bg-purple-600 text-white px-2.5 py-1 rounded-full text-[11px] font-bold shadow-sm flex items-center gap-1">
-                  <Bus className="w-3 h-3" /> BUS
-                </div>
-              )}
+                {/* ПЛАШКА BUS */}
+                {listing.trip_type?.includes('bus') && (
+                  <div className="bg-purple-600 text-white px-2.5 py-1 rounded-full text-[11px] font-bold shadow-sm flex items-center gap-1">
+                    <Bus className="w-3 h-3" /> BUS
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="p-5 flex-1 flex flex-col">
@@ -124,6 +129,9 @@ async function ListingsList({ searchParams, locale, activities }: { searchParams
                   <div className="flex items-center gap-2">
                     <MapPin className="w-3.5 h-3.5 text-[#0066cc] shrink-0" />
                     <span className="text-gray-900 font-medium">Skąd:</span> <span className="truncate">{listing.origin_city}</span>
+                    {listing.pickup_cities && listing.pickup_cities.length > 0 && (
+                      <span className="text-xs text-gray-400 truncate">(+ {listing.pickup_cities.join(', ')})</span>
+                    )}
                   </div>
                 )}
                 <div className="flex items-center gap-2">
@@ -170,41 +178,36 @@ async function HomePageContent({ searchParams }: { searchParams: Promise<SearchP
 
   return (
     <div className="space-y-6">
-      
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 pt-2">
         <div className="space-y-2">
           <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-gray-900">{tHome('title')}</h1>
+          <p className="text-md text-gray-500 max-w-xl">{tHome('subtitle')}</p>
         </div>
         
         <div className="flex items-center gap-4">
           <div className="hidden lg:flex items-center gap-4 bg-white p-3 rounded-2xl shadow-sm border border-gray-100 shrink-0">
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://snowandgo.pl" alt="QR Code" className="w-14 h-14 rounded-lg" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img 
+              src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=https://snowandgo.pl" 
+              alt="QR Code" 
+              className="w-14 h-14 rounded-lg"
+            />
             <div>
               <p className="text-sm font-semibold text-gray-900">Pobierz aplikację</p>
               <p className="text-xs text-gray-500">Zeskanuj kod aparatem</p>
             </div>
           </div>
-          <Link href="/listings/create" locale={locale} className="bg-[#0066cc] text-white px-6 py-2.5 rounded-full font-medium hover:bg-[#004c99] transition-colors shadow-sm shrink-0">
-            {tHome('createBtn')}
-          </Link>
         </div>
       </div>
 
-      <div className="lg:hidden sticky top-[60px] z-40 bg-white/90 backdrop-blur-md border-b border-gray-200 py-3 px-4 -mx-4 mb-4 flex items-center justify-between shadow-sm">
-        <button className="flex items-center gap-2 text-sm font-semibold text-gray-900 bg-gray-100 px-4 py-2 rounded-xl">
-          <SlidersHorizontal className="w-4 h-4" /> Filtry
-        </button>
-        <SortSelect currentSort={params.sort} />
-      </div>
-
       <div className="flex flex-col lg:flex-row gap-8 items-start">
-        <FilterSidebar params={params} countries={countries || []} cities={cities || []} hasActiveFilters={!!hasActiveFilters} />
-        
+        <FilterSidebar 
+          params={params} 
+          countries={countries || []}
+          cities={cities || []}
+          hasActiveFilters={!!hasActiveFilters} 
+        />
         <main className="flex-1 w-full min-w-0">
-          <div className="hidden lg:flex justify-end items-center mb-6 pb-4 border-b border-gray-100">
-            <SortSelect currentSort={params.sort} />
-          </div>
-
           <Suspense fallback={<div className="text-center py-20 text-gray-500">Ładowanie ogłoszeń...</div>}>
             <ListingsList searchParams={searchParams} locale={locale} activities={activities || []} />
           </Suspense>

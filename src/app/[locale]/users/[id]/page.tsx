@@ -78,7 +78,7 @@ async function UserProfile({ params }: { params: Promise<{ id: string }> }) {
         </div>
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-gray-900 mb-1">{displayName}</h1>
-          <p className="text-gray-500">W MatchOut od {joinYear}</p>
+          <p className="text-gray-500">W Snow&Go od {joinYear}</p>
         </div>
       </div>
 

@@ -14,17 +14,22 @@ async function LandingContent() {
   await connection();
   const supabase = await createClient();
   const locale = await getLocale();
-  const t = await getTranslations('Landing'); // Берем переводы для лендинга
+  const t = await getTranslations('Landing');
   
-  // 1. Получаем настройки лендинга
   const { data: settings } = await supabase.from('site_settings').select('*');
   
   const textKey = locale === 'pl' ? 'landing_text_pl' : 'landing_text_en';
   const landingText = settings?.find(s => s.key === textKey)?.value || t('defaultTitle');
   
+  // УМНАЯ ЛОГИКА: Поддерживаем видео (mp4, webm), картинки (jpg, png) и гифки (gif)
   const customBannerUrl = settings?.find(s => s.key === 'landing_banner_url')?.value;
   
-  // Определяем ключ для строчек в зависимости от языка
+  // Проверяем, является ли ссылка видео (по расширению)
+  const isVideo = customBannerUrl ? /\.(mp4|webm|ogg)$/i.test(customBannerUrl) : false;
+  
+  // Если ничего не вставлено в админке, показываем дефолтное видео
+  const bannerUrl = customBannerUrl || '/images/activities/banner.mp4';
+  
   const extraLinesKey = locale === 'pl' ? 'landing_extra_lines' : 'landing_extra_lines_en';
   let extraLines: ExtraLine[] = [];
   try {
@@ -36,11 +41,9 @@ async function LandingContent() {
 
   const activeLines = extraLines.filter(l => l.isActive);
 
-  // 2. Получаем активности
   const { data: activitiesData } = await supabase.from('dictionaries').select('*').eq('category', 'activity').eq('is_active', true);
   const activities = (activitiesData as DictItem[]) || [];
 
-  // 3. Получаем 3 последних объявления
   const { data: recentListings } = await supabase
     .from('listings')
     .select(`*, profiles!user_id (first_name)`)
@@ -52,11 +55,23 @@ async function LandingContent() {
     <div className="flex flex-col items-center justify-center min-h-[80vh] text-center px-4 overflow-hidden py-12">
       
       <div className="w-full max-w-5xl mb-10 overflow-hidden rounded-[2rem] shadow-2xl anim-fade-in bg-gray-100">
-        {customBannerUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={customBannerUrl} alt="Snow&Go Banner" className="w-full h-[200px] md:h-[300px] object-cover object-center" />
+        {/* Умный рендеринг: видео или картинка (включая GIF) */}
+        {isVideo ? (
+          <video 
+            src={bannerUrl} 
+            autoPlay 
+            loop 
+            muted 
+            playsInline 
+            className="w-full h-[200px] md:h-[300px] object-cover object-center" 
+          />
         ) : (
-          <video src="/banner.mp4" autoPlay loop muted playsInline className="w-full h-[200px] md:h-[300px] object-cover object-center" />
+          // eslint-disable-next-line @next/next/no-img-element
+          <img 
+            src={bannerUrl} 
+            alt="Snow&Go Banner" 
+            className="w-full h-[200px] md:h-[300px] object-cover object-center" 
+          />
         )}
       </div>
 
@@ -66,7 +81,6 @@ async function LandingContent() {
 
       <div className="flex flex-col sm:flex-row gap-6 w-full max-w-2xl justify-center mb-12 anim-fade-in" style={{ animationDelay: '0.4s' }}>
         
-        {/* КНОПКА SZUKAM */}
         <Link 
           href="/search" 
           className="flex-1 flex flex-col items-center justify-center gap-3 bg-[#eef4fc] border-2 border-[#0066cc] hover:bg-[#e2eefb] p-8 rounded-3xl shadow-[0_8px_20px_rgba(0,102,204,0.1)] hover:shadow-[0_8px_30px_rgba(0,102,204,0.2)] transition-all duration-300 group"
@@ -78,7 +92,6 @@ async function LandingContent() {
           <span className="text-sm text-[#0066cc]/80 font-medium">{t('btnSearchSub')}</span>
         </Link>
 
-        {/* КНОПКА OFERUJĘ */}
         <Link 
           href="/listings/create" 
           className="flex-1 flex flex-col items-center justify-center gap-3 bg-[#0066cc] border-2 border-[#0066cc] hover:bg-[#004c99] p-8 rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-300 group"
@@ -111,7 +124,25 @@ async function LandingContent() {
         </div>
       )}
 
-      {/* БЛОК С 3 ОФФЕРАМИ */}
+      {/* БЛОК QR-КОДА НА ГЛАВНОЙ */}
+      <div 
+        className="flex items-center gap-5 bg-white p-5 rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.06)] border border-gray-100 mb-16 anim-fade-in hover:shadow-[0_8px_40px_rgba(0,0,0,0.1)] transition-shadow duration-300"
+        style={{ animationDelay: '0.7s' }}
+      >
+        <div className="bg-white p-2 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://snowandgo.pl"
+            alt="QR Code"
+            className="w-20 h-20 rounded-xl"
+          />
+        </div>
+        <div className="text-left pr-4">
+          <p className="text-lg font-bold text-gray-900 mb-1">Pobierz aplikację</p>
+          <p className="text-sm text-gray-500 max-w-[200px] leading-relaxed">Zeskanuj kod telefonem i ciesz się wyjazdami!</p>
+        </div>
+      </div>
+
       {recentListings && recentListings.length > 0 && (
         <div className="w-full max-w-5xl anim-fade-in" style={{ animationDelay: '0.8s' }}>
           <div className="flex flex-col md:flex-row justify-between items-center mb-6 border-b border-gray-200 pb-4 gap-4">

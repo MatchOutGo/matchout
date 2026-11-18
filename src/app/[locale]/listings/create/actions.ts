@@ -11,6 +11,9 @@ type ParsedCost = {
   isShared: boolean
 }
 
+// Регулярка для поиска телефонов
+const PHONE_REGEX = /(?:\+?48[\s-]?)?\d{3}[\s-]?\d{3}[\s-]?\d{3}/g;
+
 export async function createListing(formData: FormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -23,15 +26,20 @@ export async function createListing(formData: FormData) {
   }
 
   const title = formData.get('title') as string
-  const description = formData.get('description') as string
+  
+  // ОЧИЩАЕМ ОПИСАНИЕ ОТ ТЕЛЕФОНОВ
+  const rawDescription = formData.get('description') as string || '';
+  const description = rawDescription.replace(PHONE_REGEX, '[ukryty numer]');
+
   const trip_type = formData.get('trip_type') as string
   const price_type = formData.get('price_type') as string
   
-  // ВЫТАСКИВАЕМ ФИКСИРОВАННУЮ ЦЕНУ И LAST MINUTE
-  const fixed_price = price_type === 'fixed' ? Number(formData.get('fixed_price')) || 0 : null
+  const fixed_price_no_meals = price_type.includes('fixed_no_meals') ? Number(formData.get('fixed_price_no_meals')) || 0 : null
+  const fixed_price_with_meals = price_type.includes('fixed_with_meals') ? Number(formData.get('fixed_price_with_meals')) || 0 : null
   const is_special = formData.get('is_special') === 'true'
 
-  // Массивы стран и городов (передаются как JSON-строки)
+  const cover_image = formData.get('cover_image') as string || '/images/activities/1.jpg'
+
   const countriesJson = formData.get('countries') as string
   const countries = countriesJson ? JSON.parse(countriesJson) : []
   const citiesJson = formData.get('cities') as string
@@ -53,12 +61,8 @@ export async function createListing(formData: FormData) {
   const pickupCitiesJson = formData.get('pickup_cities') as string
   const pickupCities = pickupCitiesJson ? JSON.parse(pickupCitiesJson) : []
 
-  // Ставим дефолтную активность "Narty" 
-const activity = 'narty';
-  const randomNum = Math.floor(Math.random() * 2) + 1;
-  // МЕНЯЕМ ПУТЬ НА ТВОИ КАРТИНКИ
-  const coverImagePath = `/images/activities/snowboarding${randomNum}.jpg`;
-  // Добавил as any в конце объекта, чтобы убрать красные подчеркивания в VS Code
+  const activity = 'narty';
+  
   const { data: listing, error: listingError } = await supabase
     .from('listings')
     .insert({
@@ -66,11 +70,12 @@ const activity = 'narty';
       type: 'offer',
       activity,
       title,
-      description,
+      description, // <-- Используем очищенный текст
       trip_type,
       price_type,
-      fixed_price, // <-- ДОБАВЛЕНО
-      is_special,  // <-- ДОБАВЛЕНО
+      fixed_price_no_meals,
+      fixed_price_with_meals,
+      is_special,
       countries,
       cities,
       date_start,
@@ -85,7 +90,7 @@ const activity = 'narty';
       language_pref,
       prepayment_required,
       prepayment_amount,
-      cover_image: coverImagePath 
+      cover_image
     } as any)
     .select()
     .single()
@@ -95,8 +100,7 @@ const activity = 'narty';
     return redirect('/listings/create?message=' + encodeURIComponent(listingError.message))
   }
 
-  // Сохраняем затраты (только если выбран тип цены "Кошты делимые")
-  if (price_type === 'shared') {
+  if (price_type.includes('shared')) {
     const costsJson = formData.get('costs') as string
     if (costsJson) {
       const costs = JSON.parse(costsJson) as ParsedCost[]
@@ -140,13 +144,19 @@ export async function updateListing(formData: FormData) {
   }
 
   const title = formData.get('title') as string
-  const description = formData.get('description') as string
+  
+  // ОЧИЩАЕМ ОПИСАНИЕ ОТ ТЕЛЕФОНОВ
+  const rawDescription = formData.get('description') as string || '';
+  const description = rawDescription.replace(PHONE_REGEX, '[ukryty numer]');
+
   const trip_type = formData.get('trip_type') as string
   const price_type = formData.get('price_type') as string
   
-  // ВЫТАСКИВАЕМ ФИКСИРОВАННУЮ ЦЕНУ И LAST MINUTE
-  const fixed_price = price_type === 'fixed' ? Number(formData.get('fixed_price')) || 0 : null
+  const fixed_price_no_meals = price_type.includes('fixed_no_meals') ? Number(formData.get('fixed_price_no_meals')) || 0 : null
+  const fixed_price_with_meals = price_type.includes('fixed_with_meals') ? Number(formData.get('fixed_price_with_meals')) || 0 : null
   const is_special = formData.get('is_special') === 'true'
+  
+  const cover_image = formData.get('cover_image') as string || '/images/activities/1.jpg'
 
   const countriesJson = formData.get('countries') as string
   const countries = countriesJson ? JSON.parse(countriesJson) : []
@@ -169,17 +179,17 @@ export async function updateListing(formData: FormData) {
   const pickupCitiesJson = formData.get('pickup_cities') as string
   const pickupCities = pickupCitiesJson ? JSON.parse(pickupCitiesJson) : []
 
-  // Добавил as any в конце объекта, чтобы убрать красные подчеркивания
   const { error: updateError } = await supabase
     .from('listings')
     .update({
       type: 'offer',
       title, 
-      description, 
+      description, // <-- Очищенный текст
       trip_type, 
       price_type, 
-      fixed_price, // <-- ДОБАВЛЕНО
-      is_special,  // <-- ДОБАВЛЕНО
+      fixed_price_no_meals,
+      fixed_price_with_meals,
+      is_special,
       countries, 
       cities, 
       date_start, 
@@ -192,7 +202,8 @@ export async function updateListing(formData: FormData) {
       children_allowed, 
       language_pref, 
       prepayment_required, 
-      prepayment_amount
+      prepayment_amount,
+      cover_image
     } as any)
     .eq('id', listingId)
     .eq('user_id', user.id)
@@ -203,7 +214,7 @@ export async function updateListing(formData: FormData) {
 
   await supabase.from('listing_costs').delete().eq('listing_id', listingId)
   
-  if (price_type === 'shared') {
+  if (price_type.includes('shared')) {
     const costsJson = formData.get('costs') as string
     if (costsJson) {
       const costs = JSON.parse(costsJson) as ParsedCost[]

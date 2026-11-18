@@ -16,7 +16,7 @@ export default function PrivacyPage() {
         <div className="space-y-6 text-gray-600 leading-relaxed text-[15px]">
           <section>
             <h2 className="text-xl font-semibold text-gray-900 mb-3">1. Informacje ogólne</h2>
-            <p>Niniejsza Polityka Prywatności określa zasady przetwarzania i ochrony danych osobowych Użytkowników serwisu MatchOut (zwanego dalej &quot;Serwisem&quot;). Administratorem danych jest właściciel Serwisu. Dbamy o Twoją prywatność i przestrzegamy RODO.</p>
+            <p>Niniejsza Polityka Prywatności określa zasady przetwarzania i ochrony danych osobowych Użytkowników serwisu Snow&Go (zwanego dalej &quot;Serwisem&quot;). Administratorem danych jest właściciel Serwisu. Dbamy o Twoją prywatność i przestrzegamy RODO.</p>
           </section>
 
           <section>

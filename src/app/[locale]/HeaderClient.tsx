@@ -4,7 +4,7 @@ import { useEffect, useMemo } from 'react'
 import { useRouter, usePathname, Link } from '@/i18n/routing'
 import { useLocale, useTranslations } from 'next-intl'
 import { createClient } from '@/utils/supabase/client'
-import { MessageCircle, Bell } from 'lucide-react'
+import { MessageCircle, Bell, LogOut } from 'lucide-react' // Добавили LogOut
 import { User } from '@supabase/supabase-js'
 
 type Profile = {
@@ -47,6 +47,13 @@ export default function HeaderClient({
   const toggleLanguage = () => {
     const nextLocale = locale === 'pl' ? 'en' : 'pl';
     router.replace(pathname, { locale: nextLocale });
+  }
+
+  // ФУНКЦИЯ ВЫХОДА
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    router.refresh()
+    router.push('/')
   }
 
   return (
@@ -100,6 +107,15 @@ export default function HeaderClient({
               )}
             </div>
           </Link>
+
+          {/* КНОПКА ВЫХОДА */}
+          <button 
+            onClick={handleLogout}
+            className="text-gray-400 hover:text-red-500 transition-colors p-1"
+            title="Wyloguj"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
         </>
       ) : (
         <>

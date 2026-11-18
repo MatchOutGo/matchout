@@ -3,11 +3,9 @@ import { createClient } from '@/utils/supabase/server';
 import { notFound } from 'next/navigation';
 import { connection } from 'next/server';
 import Link from 'next/link';
-import { MapPin, Calendar, ArrowLeft, Phone, MessageCircle, Edit, Trash2, Bus } from 'lucide-react';
-import { joinTrip, deleteListing } from './actions';
-import ReportButton from '@/components/ReportButton'; // <-- Импортируем нашу кнопку
-
-type Cost = { id: string; title: string; amount: number; is_shared: boolean };
+import { MapPin, Calendar, ArrowLeft, MessageCircle, Edit, Trash2, Bus, MountainSnow, Wallet } from 'lucide-react';
+import { deleteListing } from './actions';
+import ReportButton from '@/components/ReportButton';
 
 async function ListingDetails({ params, searchParams }: { params: Promise<{ id: string }>, searchParams: Promise<{ error?: string }> }) {
   await connection();
@@ -20,42 +18,30 @@ async function ListingDetails({ params, searchParams }: { params: Promise<{ id: 
 
   const { data: listing, error: dbError } = await supabase
     .from('listings')
-    .select(`*, profiles!user_id (id, first_name, avatar_url, phone), listing_costs (*)`)
+    .select(`*, profiles!user_id (id, first_name, avatar_url, phone)`)
     .eq('id', id)
     .single();
 
   if (dbError || !listing) notFound();
 
-  const { data: featureFlagsData } = await supabase.from('dictionaries').select('*').eq('category', 'feature_flag')
-  const showGender = featureFlagsData?.find(f => f.value === 'gender_pref')?.is_active ?? true
-  const showChildren = featureFlagsData?.find(f => f.value === 'children_allowed')?.is_active ?? true
-
   const author = Array.isArray(listing.profiles) ? listing.profiles[0] : listing.profiles;
   const authorName = author?.first_name || 'Użytkownik';
   const authorId = listing.user_id; 
 
-  const currentParticipants = listing.current_participants || 0;
-  const maxParticipants = listing.max_participants || 2;
-
-  let isParticipant = false;
-  if (user) {
-    const { data: participant } = await supabase.from('listing_participants').select('status').eq('listing_id', id).eq('user_id', user.id).single();
-    if (participant?.status === 'approved') isParticipant = true;
-  }
-
   const isOrganizer = user?.id === authorId;
-  const canSeePhone = isParticipant || isOrganizer;
 
-  const costs = (listing.listing_costs || []) as Cost[];
-  const totalShared = costs.filter((c) => c.is_shared).reduce((sum, c) => sum + Number(c.amount), 0);
-  const totalIndividual = costs.filter((c) => !c.is_shared).reduce((sum, c) => sum + Number(c.amount), 0);
-  const totalCost = totalShared + totalIndividual;
-  const perPersonCost = (totalShared / maxParticipants) + totalIndividual;
+  // Логика цен
+  const priceTypes = listing.price_type ? listing.price_type.split(',') : [];
+  const hasShared = priceTypes.includes('shared');
+  const hasFixedNoMeals = priceTypes.includes('fixed_no_meals');
+  const hasFixedWithMeals = priceTypes.includes('fixed_with_meals');
 
-  const handleJoin = async () => {
-    'use server'
-    await joinTrip(id);
-  }
+  // Словарь для транспорта
+  const tripTypeLabels: Record<string, string> = {
+    'bus': 'Bus',
+    'osobowy': 'Samochód osobowy',
+    'bez_znaczenia': 'Bez znaczenia'
+  };
 
   return (
     <div className="max-w-5xl mx-auto pb-24">
@@ -77,7 +63,7 @@ async function ListingDetails({ params, searchParams }: { params: Promise<{ id: 
           <div className="absolute top-6 left-6 bg-white/90 backdrop-blur-md px-4 py-1.5 rounded-full text-sm font-semibold text-gray-900 shadow-sm uppercase tracking-wide">
             {listing.activity}
           </div>
-          {listing.is_bus_trip && (
+          {listing.trip_type?.includes('bus') && (
             <div className="absolute top-6 right-6 bg-purple-600 text-white px-4 py-1.5 rounded-full text-sm font-semibold shadow-sm flex items-center gap-2">
               <Bus className="w-4 h-4" /> Transport Busem
             </div>
@@ -88,96 +74,99 @@ async function ListingDetails({ params, searchParams }: { params: Promise<{ id: 
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8">
             <div>
               <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-gray-900 mb-4">{listing.title}</h1>
+              
               <div className="flex flex-wrap items-center gap-6 text-gray-500 text-[15px]">
-                {listing.country && (
-                  <span className="font-medium text-gray-900">{listing.country}</span>
+                {listing.countries && listing.countries.length > 0 && (
+                  <span className="font-medium text-gray-900 uppercase">{listing.countries.join(', ')}</span>
                 )}
-                {listing.city && (
+                {listing.cities && listing.cities.length > 0 && (
                   <span className="flex items-center gap-2">
-                    <MapPin className="w-5 h-5 text-gray-400" /> {listing.city}
+                    <MapPin className="w-5 h-5 text-gray-400" /> {listing.cities.join(', ')}
                   </span>
                 )}
                 <span className="flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-gray-400" /> {listing.date_start} — {listing.date_end}
                 </span>
+                
+                {listing.ski_days && (
+                  <span className="flex items-center gap-2">
+                    <MountainSnow className="w-5 h-5 text-gray-400" /> 
+                    {listing.ski_days} {listing.ski_days === 1 ? 'dzień' : 'dni'} na nartach
+                  </span>
+                )}
               </div>
             </div>
             
-            <div className="bg-[#f5f5f7] p-6 rounded-2xl text-center min-w-[200px] shrink-0">
-              <p className="text-sm text-gray-500 mb-1">Cena za osobę</p>
-              <p className="text-3xl font-semibold text-[#0071e3]">{Math.round(perPersonCost)} zł</p>
-              <p className="text-xs text-gray-400 mt-1">Całkowity koszt: {totalCost} zł</p>
+            {/* БЛОК С ЦЕНОЙ */}
+            <div className="bg-[#f5f5f7] p-6 rounded-2xl text-center min-w-[240px] shrink-0 space-y-3">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Rodzaj kosztów</p>
+              
+              {hasFixedNoMeals && (
+                <p className="text-sm font-semibold text-gray-900">
+                  Koszty ustalone bez wyżywienia: {listing.fixed_price_no_meals} zł
+                </p>
+              )}
+              
+              {hasFixedWithMeals && (
+                <p className="text-sm font-semibold text-gray-900">
+                  Koszty ustalone z wyżywieniem: {listing.fixed_price_with_meals} zł
+                </p>
+              )}
+
+              {hasShared && (
+                <p className="text-sm font-semibold text-gray-900">
+                  Koszty dzielone
+                </p>
+              )}
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+            
+            {/* ЛЕВАЯ КОЛОНКА (Инфо-блок + Описание) */}
             <div className="md:col-span-2 space-y-8">
+              
+              {/* ОБНОВЛЕННЫЙ БЛОК С ДЕТАЛЯМИ */}
               <section>
-                <h2 className="text-xl font-semibold mb-4">Opis wyjazdu</h2>
-                <p className="text-gray-600 leading-relaxed whitespace-pre-line">{listing.description || 'Brak opisu.'}</p>
-              </section>
-
-              <section>
-                <h2 className="text-xl font-semibold mb-4">Szczegóły</h2>
-                <div className="grid grid-cols-2 gap-4">
+                <h2 className="text-xl font-semibold mb-4 text-gray-900">Szczegóły wyjazdu</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
                   
-                  {showGender && (
-                    <div className="bg-gray-50 p-4 rounded-xl">
-                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Dla kogo miejsce?</p>
-                      <p className="font-medium">
-                        {listing.gender_pref === 'men' ? 'Tylko mężczyźni' : listing.gender_pref === 'women' ? 'Tylko kobiety' : 'Wszyscy'}
-                      </p>
-                    </div>
-                  )}
-                  
-                  {showChildren && (
-                    <div className="bg-gray-50 p-4 rounded-xl">
-                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Dzieci</p>
-                      <p className="font-medium">
-                        {listing.children_allowed === 'no' ? 'Tylko dorośli' : listing.children_allowed === 'family' ? 'Wyjazd rodzinny' : 'Można z dziećmi'}
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="bg-gray-50 p-4 rounded-xl">
-                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Język</p>
-                    <p className="font-medium uppercase">{listing.language_pref}</p>
+                  <div className="bg-gray-50 p-4 rounded-xl flex flex-col justify-center border border-gray-100">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1 flex items-center gap-1"><Bus className="w-3 h-3"/> Transport</p>
+                    <p className="font-semibold text-sm text-gray-900">{tripTypeLabels[listing.trip_type] || listing.trip_type}</p>
                   </div>
-                  <div className="bg-gray-50 p-4 rounded-xl">
-                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Miejsca</p>
-                    <p className="font-medium">{currentParticipants} / {maxParticipants}</p>
-                  </div>
-                  
-                  {listing.pickup_cities && listing.pickup_cities.length > 0 && (
-                    <div className="bg-blue-50 p-4 rounded-xl col-span-2">
-                      <p className="text-xs text-blue-600 uppercase tracking-wide mb-2">Skąd można dołączyć?</p>
-                      <div className="flex flex-wrap gap-2">
-                        {listing.pickup_cities.map((city: string) => (
-                          <span key={city} className="px-2.5 py-1 bg-white text-[#0071e3] text-sm font-medium rounded-md shadow-sm">
-                            {city}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {listing.is_bus_trip && (
-                    <div className="bg-purple-50 p-4 rounded-xl col-span-2 flex justify-between items-center">
-                      <p className="text-xs text-purple-700 uppercase tracking-wide">Transport</p>
-                      <p className="font-bold text-lg text-purple-900 flex items-center gap-2"><Bus className="w-5 h-5" /> Bus (w cenie)</p>
-                    </div>
-                  )}
 
                   {listing.prepayment_required && (
-                    <div className="bg-gray-50 p-4 rounded-xl col-span-2 flex justify-between items-center">
-                      <p className="text-xs text-gray-500 uppercase tracking-wide">Wymagana zaliczka</p>
-                      <p className="font-bold text-lg text-gray-900">{listing.prepayment_amount} zł</p>
+                    <div className="bg-orange-50 p-4 rounded-xl flex flex-col justify-center border border-orange-100">
+                      <p className="text-[10px] text-orange-600 uppercase tracking-wide mb-1 flex items-center gap-1"><Wallet className="w-3 h-3"/> Zaliczka</p>
+                      <p className="font-semibold text-sm text-orange-900">{listing.prepayment_amount} zł</p>
                     </div>
                   )}
                 </div>
+
+                {listing.pickup_cities && listing.pickup_cities.length > 0 && (
+                  <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                    <p className="text-[10px] text-blue-600 uppercase tracking-wide mb-2 font-bold flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5" /> Możliwość dosiadki
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {listing.pickup_cities.map((city: string) => (
+                        <span key={city} className="px-3 py-1 bg-white text-[#0071e3] text-sm font-medium rounded-lg shadow-sm border border-blue-100">
+                          {city}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </section>
+
+              <section className="pt-4 border-t border-gray-100">
+                <h2 className="text-xl font-semibold mb-4 text-gray-900">Opis wyjazdu</h2>
+                <p className="text-gray-600 leading-relaxed whitespace-pre-line">{listing.description || 'Brak opisu.'}</p>
               </section>
             </div>
 
+            {/* ПРАВАЯ КОЛОНКА */}
             <div className="space-y-6">
               <div className="border border-gray-100 p-6 rounded-2xl shadow-sm bg-white">
                 <p className="text-xs text-gray-500 uppercase tracking-wide mb-4">Organizator</p>
@@ -193,23 +182,9 @@ async function ListingDetails({ params, searchParams }: { params: Promise<{ id: 
                 </Link>
 
                 <div className="space-y-3">
-                  {canSeePhone && (
-                    <a href={`tel:${author?.phone}`} className="w-full py-3 px-4 bg-green-50 text-green-700 border border-green-200 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-green-100 transition-colors">
-                      <Phone className="w-4 h-4" /> <span>Zadzwoń</span>
-                    </a>
-                  )}
-                  
                   <Link href={`/listings/${id}/chat`} className="w-full py-3 bg-[#0071e3] text-white rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-[#0077ed] transition-colors shadow-sm">
-                    <MessageCircle className="w-4 h-4" /> {canSeePhone ? 'Czat z ekipą' : 'Napisz wiadomość'}
+                    <MessageCircle className="w-4 h-4" /> Napisz do organizatora
                   </Link>
-
-                  {!canSeePhone && user && (
-                    <form action={handleJoin}>
-                      <button type="submit" disabled={currentParticipants >= maxParticipants} className="w-full py-3 bg-white text-[#0071e3] border-2 border-[#0071e3] rounded-xl font-medium hover:bg-blue-50 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                        {currentParticipants >= maxParticipants ? 'Brak miejsc' : 'Dołącz do wyjazdu'}
-                      </button>
-                    </form>
-                  )}
                 </div>
 
                 {isOrganizer && (
@@ -226,7 +201,6 @@ async function ListingDetails({ params, searchParams }: { params: Promise<{ id: 
                   </div>
                 )}
 
-                {/* КНОПКА ЖАЛОБЫ (DSA) - Показывается всем, кроме организатора */}
                 {!isOrganizer && (
                   <div className="pt-4 mt-4 border-t border-gray-100 flex justify-center">
                     <ReportButton listingId={id} />
@@ -234,20 +208,13 @@ async function ListingDetails({ params, searchParams }: { params: Promise<{ id: 
                 )}
               </div>
 
-              <div className="bg-gray-50 p-6 rounded-2xl">
-                <p className="text-xs text-gray-500 uppercase tracking-wide mb-4">Koszty</p>
-                {costs.length > 0 ? (
-                  <ul className="space-y-3">
-                    {costs.map((cost) => (
-                      <li key={cost.id} className="flex justify-between text-sm">
-                        <span className="text-gray-600">{cost.title} {cost.is_shared ? '(dzielone)' : ''}</span>
-                        <span className="font-medium">{cost.amount} zł</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-gray-500">Organizator nie dodał jeszcze kosztów.</p>
-                )}
+              <div className="bg-gray-50 p-6 rounded-2xl text-center border border-gray-100">
+                <Link 
+                  href={`/listings?author=${authorId}`} 
+                  className="text-sm font-semibold text-[#0071e3] hover:text-[#004c99] transition-colors underline decoration-2 underline-offset-4"
+                >
+                  Zobacz wszystkie oferty tego organizatora
+                </Link>
               </div>
             </div>
           </div>

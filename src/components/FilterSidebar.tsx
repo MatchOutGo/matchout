@@ -5,6 +5,7 @@ import { SlidersHorizontal, ChevronDown, RotateCcw, MountainSnow, MapPin } from 
 import Link from 'next/link'
 import { useRouter, usePathname } from '@/i18n/routing'
 import { useTranslations } from 'next-intl'
+import CityAutocomplete from '@/components/CityAutocomplete' // <-- ДОБАВИЛИ ИМПОРТ
 
 type SearchParams = {
   activity?: string; countries?: string; cities?: string; dateStart?: string; dateEnd?: string; transport?: string; priceType?: string; sort?: string; origin?: string;
@@ -12,12 +13,7 @@ type SearchParams = {
 
 type DictItem = { value: string; label_pl: string; parent_value?: string; is_resort?: boolean }
 
-const FAMOUS_POLISH_CITIES = [
-  'Warszawa', 'Kraków', 'Łódź', 'Wrocław', 'Poznań', 
-  'Gdańsk', 'Szczecin', 'Bydgoszcz', 'Lublin', 'Białystok', 
-  'Katowice', 'Gdynia', 'Częstochowa', 'Radom', 'Rzeszów', 
-  'Toruń', 'Sosnowiec', 'Kielce', 'Gliwice', 'Olsztyn'
-]
+// УБРАЛИ КОНСТАНТУ FAMOUS_POLISH_CITIES
 
 export default function FilterSidebar({ 
   params, countries, cities, hasActiveFilters
@@ -25,7 +21,7 @@ export default function FilterSidebar({
   params: SearchParams, countries: DictItem[], cities: DictItem[], hasActiveFilters: boolean
 }) {
   const [isOpen, setIsOpen] = useState(false)
-  const [today, setToday] = useState('') // <-- Фикс гидратации
+  const [today, setToday] = useState('') 
   
   const t = useTranslations('Filters')
   const router = useRouter()
@@ -61,10 +57,9 @@ export default function FilterSidebar({
     c.is_resort && (!selectedDestCountry || c.parent_value === selectedDestCountry)
   )
   
-  // В "Skąd" показываем ТОЛЬКО 20 известных городов Польши
+  // В "Skąd" БЕРЕМ ВСЕ ГОРОДА ПОЛЬШИ
   const availableOriginCities = cities
     .filter(c => c.parent_value === polandValue && !c.is_resort)
-    .filter(c => FAMOUS_POLISH_CITIES.includes(c.label_pl))
     .sort((a, b) => a.label_pl.localeCompare(b.label_pl))
 
   const inputClass = "w-full bg-[#f5f5f7] border-none rounded-xl px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#0066cc]/50"
@@ -161,14 +156,13 @@ export default function FilterSidebar({
               <label className={labelClass}>
                 <MapPin className="w-3 h-3 text-[#0066cc]" /> Miejscowość (Polska)
               </label>
-              <select value={params.origin || ''} onChange={(e) => updateFilter('origin', e.target.value)} className={inputClass}>
-                <option value="">Wszystkie</option>
-                {availableOriginCities.map(c => (
-                  <option key={c.value} value={c.value}>
-                    {c.label_pl}
-                  </option>
-                ))}
-              </select>
+              {/* ЗАМЕНИЛИ SELECT НА CITYAUTOCOMPLETE */}
+              <CityAutocomplete 
+                value={params.origin || ''}
+                onChange={(val) => updateFilter('origin', val)}
+                options={availableOriginCities}
+                placeholder="Wpisz miasto..."
+              />
             </div>
           </div>
 

@@ -3,17 +3,12 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from '@/i18n/routing'
 import { Search, RotateCcw, MountainSnow, MapPin } from 'lucide-react'
+import CityAutocomplete from '@/components/CityAutocomplete' // <-- ДОБАВИЛИ ИМПОРТ
 
 type DictItem = { value: string; label_pl: string; parent_value?: string; is_resort?: boolean }
 
-const FAMOUS_POLISH_CITIES = [
-  'Warszawa', 'Kraków', 'Łódź', 'Wrocław', 'Poznań', 
-  'Gdańsk', 'Szczecin', 'Bydgoszcz', 'Lublin', 'Białystok', 
-  'Katowice', 'Gdynia', 'Częstochowa', 'Radom', 'Rzeszów', 
-  'Toruń', 'Sosnowiec', 'Kielce', 'Gliwice', 'Olsztyn'
-]
+// УБРАЛИ КОНСТАНТУ FAMOUS_POLISH_CITIES
 
-// Убрали activities из пропсов
 export default function SearchFilters({ 
   countries, cities
 }: { 
@@ -38,7 +33,6 @@ export default function SearchFilters({
     transport: 'bez_znaczenia', 
     priceType: ''
   })
- 
 
   const polandValue = countries.find(c => c.label_pl === 'Polska')?.value || 'PL'
 
@@ -46,11 +40,14 @@ export default function SearchFilters({
     c.is_resort && (!form.destCountry || c.parent_value === form.destCountry)
   )
   
-  const availableOriginCities = cities
+  // БЕРЕМ ВСЕ ГОРОДА ПОЛЬШИ
+ const availableOriginCities = cities
     .filter(c => c.parent_value === polandValue && !c.is_resort)
-    .filter(c => FAMOUS_POLISH_CITIES.includes(c.label_pl))
     .sort((a, b) => a.label_pl.localeCompare(b.label_pl))
 
+  // ДИАГНОСТИКА:
+  console.log("Всего городов в фильтре:", availableOriginCities.length);
+  console.log("Есть ли Жабно?", availableOriginCities.find(c => c.label_pl === 'Żabno'));
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const params = new URLSearchParams()
@@ -167,14 +164,13 @@ export default function SearchFilters({
           <label className={labelClass}>
             <MapPin className="w-3.5 h-3.5 text-[#0066cc]" /> Miejscowość (Polska)
           </label>
-          <select value={form.originCity} onChange={(e) => setForm({...form, originCity: e.target.value})} className={inputClass}>
-            <option value="">Wszystkie</option>
-            {availableOriginCities.map(c => (
-              <option key={c.value} value={c.value}>
-                {c.label_pl}
-              </option>
-            ))}
-          </select>
+          {/* ЗАМЕНИЛИ SELECT НА CITYAUTOCOMPLETE */}
+          <CityAutocomplete 
+            value={form.originCity}
+            onChange={(val) => setForm({...form, originCity: val})}
+            options={availableOriginCities}
+            placeholder="Wpisz miasto..."
+          />
         </div>
       </div>
 

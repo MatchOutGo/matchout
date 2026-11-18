@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { createListing, updateListing } from './actions'
-import { Loader2, MapPin, X, MountainSnow, Flame } from 'lucide-react'
+import { Loader2, MapPin, X, MountainSnow, Flame, Check } from 'lucide-react'
 import { useFormStatus } from 'react-dom'
 import CustomSelect from '@/components/CustomSelect'
 import CitySelect from '@/components/CitySelect'
+import CityAutocomplete from '@/components/CityAutocomplete'
 
 type DictItem = { value: string; label_pl: string; parent_value?: string; is_resort?: boolean }
 
@@ -16,6 +17,8 @@ type InitialListingData = {
   trip_type?: string
   price_type?: string
   fixed_price?: number
+  fixed_price_no_meals?: number
+  fixed_price_with_meals?: number
   countries?: string[]
   cities?: string[]
   ski_days?: number
@@ -29,6 +32,7 @@ type InitialListingData = {
   children_allowed?: string
   language_pref?: string
   is_special?: boolean
+  cover_image?: string
 }
 
 const TRIP_TYPE_OPTIONS = [
@@ -37,19 +41,20 @@ const TRIP_TYPE_OPTIONS = [
   { value: 'bez_znaczenia', label: 'Bez znaczenia' },
 ] as const
 
+const PRICE_TYPE_OPTIONS = [
+  { value: 'shared', label: 'Koszty dzielone' },
+  { value: 'fixed_no_meals', label: 'Koszty ustalone bez wyżywienia' },
+  { value: 'fixed_with_meals', label: 'Koszty ustalone z wyżywieniem' },
+] as const
+
+const AVAILABLE_IMAGES = Array.from({ length: 20 }, (_, i) => `/images/activities/${i + 1}.jpg`);
+
 const normalizeTripType = (value?: string) => {
   if (value === 'bus' || value === 'osobowy' || value === 'bez_znaczenia') return value
   if (value === 'Bus') return 'bus'
   if (value === 'Osobowy' || value === 'car_shared' || value === 'car') return 'osobowy'
   return 'bez_znaczenia'
 }
-
-const FAMOUS_POLISH_CITIES = [
-  'Warszawa', 'Kraków', 'Łódź', 'Wrocław', 'Poznań', 
-  'Gdańsk', 'Szczecin', 'Bydgoszcz', 'Lublin', 'Białystok', 
-  'Katowice', 'Gdynia', 'Częstochowa', 'Radom', 'Rzeszów', 
-  'Toruń', 'Sosnowiec', 'Kielce', 'Gliwice', 'Olsztyn'
-]
 
 function SubmitButton({ isEdit }: { isEdit: boolean }) {
   const { pending } = useFormStatus();
@@ -62,19 +67,19 @@ function SubmitButton({ isEdit }: { isEdit: boolean }) {
 }
 
 export default function CreateListingForm({ 
-  cities, countries, priceTypes, initialData, listingId, showGender = false, showChildren = false
+  cities, countries, initialData, listingId, showGender = false, showChildren = false
 }: { 
   cities: DictItem[], 
   countries: DictItem[],
   tripTypes?: DictItem[],
-  priceTypes: DictItem[],
+  priceTypes?: DictItem[],
   initialData?: InitialListingData,
   initialCosts?: unknown[],
   listingId?: string,
   showGender?: boolean,
   showChildren?: boolean
 }) {
-  const [today, setToday] = useState('') // <-- Фикс гидратации
+  const [today, setToday] = useState('') 
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -85,8 +90,16 @@ export default function CreateListingForm({
   const [dateEnd, setDateEnd] = useState(initialData?.date_end ? initialData.date_end.split('T')[0] : '')
   
   const [tripType, setTripType] = useState(normalizeTripType(initialData?.trip_type))
-  const [priceType, setPriceType] = useState(initialData?.price_type || 'any')
-  const [fixedPrice, setFixedPrice] = useState(initialData?.fixed_price?.toString() || '')
+  
+  const [selectedPriceTypes, setSelectedPriceTypes] = useState<string[]>(
+    initialData?.price_type ? initialData.price_type.split(',') : []
+  );
+  const [priceError, setPriceError] = useState(false);
+
+  const [priceNoMeals, setPriceNoMeals] = useState(initialData?.fixed_price_no_meals?.toString() || '')
+  const [priceWithMeals, setPriceWithMeals] = useState(initialData?.fixed_price_with_meals?.toString() || '')
+
+  const [coverImage, setCoverImage] = useState(initialData?.cover_image || AVAILABLE_IMAGES[0])
   
   const [destCountry, setDestCountry] = useState<string>('')
   const [destCity, setDestCity] = useState<string>('')
@@ -106,13 +119,15 @@ export default function CreateListingForm({
   
   const [isSpecial, setIsSpecial] = useState(initialData?.is_special || false)
 
+  // СОСТОЯНИЕ ДЛЯ ОШИБКИ ОПИСАНИЯ
+  const [descriptionError, setDescriptionError] = useState(false);
+
   const polandValue = countries.find(c => c.label_pl === 'Polska')?.value || 'PL'
 
   const availableDestCities = cities.filter(c => c.is_resort && (!destCountry || c.parent_value === destCountry))
 
   const availableOriginCities = cities
     .filter(c => c.parent_value === polandValue && !c.is_resort)
-    .filter(c => FAMOUS_POLISH_CITIES.includes(c.label_pl))
     .sort((a, b) => a.label_pl.localeCompare(b.label_pl))
 
   const filteredPickupCities = cities.filter(city => 
@@ -130,6 +145,20 @@ export default function CreateListingForm({
   }
   const removePickupCity = (cityName: string) => setPickupCities(pickupCities.filter(c => c !== cityName))
 
+  const togglePriceType = (type: string) => {
+    setPriceError(false);
+    setSelectedPriceTypes(prev => {
+      if (type === 'shared') {
+        return prev.includes('shared') ? [] : ['shared'];
+      } else {
+        const withoutShared = prev.filter(t => t !== 'shared');
+        return withoutShared.includes(type)
+          ? withoutShared.filter(t => t !== type)
+          : [...withoutShared, type];
+      }
+    });
+  };
+
   const inputClass = "w-full bg-[#f5f5f7] border-none rounded-xl px-4 py-3 text-[15px] text-gray-900 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-[#0066cc]/50 transition-all outline-none"
   const labelClass = "block text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1"
   const cardClass = "bg-white p-6 md:p-8 rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.04)] space-y-6"
@@ -137,14 +166,42 @@ export default function CreateListingForm({
 
   const formAction = listingId ? updateListing : createListing;
 
+  // ВАЛИДАЦИЯ ФОРМЫ
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    let hasError = false;
+
+    if (selectedPriceTypes.length === 0) {
+      e.preventDefault();
+      setPriceError(true);
+      hasError = true;
+    }
+
+    // Проверка на телефон в описании
+    const phoneRegex = /(?:\+?48[\s-]?)?\d{3}[\s-]?\d{3}[\s-]?\d{3}/g;
+    if (phoneRegex.test(description)) {
+      e.preventDefault();
+      setDescriptionError(true);
+      hasError = true;
+    } else {
+      setDescriptionError(false);
+    }
+    
+    // Если есть ошибки, предотвращаем отправку (на всякий случай, если что-то упустили)
+    if (hasError) {
+      e.preventDefault();
+    }
+  };
+
   return (
-    <form action={formAction} className="space-y-6">
+    <form action={formAction} onSubmit={handleSubmit} className="space-y-6">
       {listingId && <input type="hidden" name="listingId" value={listingId} />}
       <input type="hidden" name="type" value="offer" />
       <input type="hidden" name="costs" value="[]" />
       <input type="hidden" name="max_participants" value="4" />
       
       <input type="hidden" name="is_special" value={isSpecial.toString()} />
+      <input type="hidden" name="cover_image" value={coverImage} />
+      
       {!showGender && <input type="hidden" name="gender_pref" value={initialData?.gender_pref || 'any'} />}
       {!showChildren && <input type="hidden" name="children_allowed" value={initialData?.children_allowed || 'yes'} />}
       <input type="hidden" name="language_pref" value="pl" />
@@ -154,6 +211,7 @@ export default function CreateListingForm({
       
       <input type="hidden" name="pickup_cities" value={JSON.stringify(pickupCities)} />
       <input type="hidden" name="prepayment_required" value={prepaymentRequired.toString()} />
+      <input type="hidden" name="price_type" value={selectedPriceTypes.join(',')} />
 
       <div className={cardClass}>
         <h2 className={titleClass}>Podstawowe informacje</h2>
@@ -228,11 +286,11 @@ export default function CreateListingForm({
         
         <div>
           <label className={labelClass}>Miasto</label>
-          <CitySelect 
+          <CityAutocomplete 
             value={originCity}
             onChange={setOriginCity}
             options={availableOriginCities}
-            placeholder="Wybierz miasto..."
+            placeholder="Wpisz miasto (np. Warszawa)..."
           />
           <input type="hidden" name="origin_city" value={originCity} />
         </div>
@@ -281,36 +339,49 @@ export default function CreateListingForm({
       </div>
 
       <div className={cardClass}>
-        <h2 className={titleClass}>Cena i płatności</h2>
+        <h2 className={titleClass}>Koszty</h2>
         
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Typ ceny</label>
-          <div className="space-y-2 bg-[#f5f5f7] p-4 rounded-2xl">
-            {priceTypes.map((type) => (
-              <div key={type.value} className="flex items-center justify-between gap-4">
-                <label className="flex items-center gap-3 cursor-pointer flex-1">
+          <div className={`space-y-3 p-2 rounded-2xl border-2 transition-colors ${priceError ? 'border-red-200 bg-red-50' : 'border-transparent'}`}>
+            {PRICE_TYPE_OPTIONS.map((type) => (
+              <div key={type.value} className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-3 rounded-xl transition-colors ${selectedPriceTypes.includes(type.value) ? 'bg-[#f5f5f7] border border-gray-200' : 'bg-white border border-gray-100 hover:bg-gray-50'}`}>
+                <label className="flex items-center gap-3 cursor-pointer">
                   <input 
-                    type="radio" 
-                    name="price_type" 
-                    value={type.value} 
-                    checked={priceType === type.value}
-                    onChange={(e) => setPriceType(e.target.value)}
-                    className="w-4 h-4 text-[#0066cc] focus:ring-[#0066cc]"
+                    type="checkbox" 
+                    checked={selectedPriceTypes.includes(type.value)}
+                    onChange={() => togglePriceType(type.value)}
+                    className="w-5 h-5 rounded text-[#0066cc] focus:ring-[#0066cc]"
                   />
-                  <span className="text-sm font-medium text-gray-700">{type.label_pl}</span>
+                  <span className="font-medium text-gray-900">{type.label}</span>
                 </label>
 
-                {priceType === 'fixed' && type.value === 'fixed' && (
-                  <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-2">
+                {type.value === 'fixed_no_meals' && selectedPriceTypes.includes('fixed_no_meals') && (
+                  <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-2 w-full sm:w-auto pl-8 sm:pl-0">
                     <input 
-                      name="fixed_price" 
+                      name="fixed_price_no_meals" 
                       type="number" 
                       min="0" 
-                      required 
-                      value={fixedPrice} 
-                      onChange={(e) => setFixedPrice(e.target.value)} 
+                      required
+                      value={priceNoMeals} 
+                      onChange={(e) => setPriceNoMeals(e.target.value)} 
                       placeholder="Kwota" 
-                      className="w-28 bg-white border border-gray-200 rounded-xl px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-[#0066cc]/50" 
+                      className="w-full sm:w-32 bg-white border border-gray-200 rounded-xl px-3 py-2 text-[15px] outline-none focus:ring-2 focus:ring-[#0066cc]/50" 
+                    />
+                    <span className="text-gray-500 text-sm font-medium">zł</span>
+                  </div>
+                )}
+
+                {type.value === 'fixed_with_meals' && selectedPriceTypes.includes('fixed_with_meals') && (
+                  <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-2 w-full sm:w-auto pl-8 sm:pl-0">
+                    <input 
+                      name="fixed_price_with_meals" 
+                      type="number" 
+                      min="0" 
+                      required
+                      value={priceWithMeals} 
+                      onChange={(e) => setPriceWithMeals(e.target.value)} 
+                      placeholder="Kwota" 
+                      className="w-full sm:w-32 bg-white border border-gray-200 rounded-xl px-3 py-2 text-[15px] outline-none focus:ring-2 focus:ring-[#0066cc]/50" 
                     />
                     <span className="text-gray-500 text-sm font-medium">zł</span>
                   </div>
@@ -318,6 +389,10 @@ export default function CreateListingForm({
               </div>
             ))}
           </div>
+          
+          {priceError && (
+            <p className="text-red-500 text-sm mt-3 font-medium">Wybierz przynajmniej jeden rodzaj kosztów.</p>
+          )}
         </div>
 
         {(showGender || showChildren) && (
@@ -367,7 +442,40 @@ export default function CreateListingForm({
             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
           </label>
         </div>
+      </div>
 
+      <div className={cardClass}>
+        <h2 className={titleClass}>Wybierz zdjęcie główne</h2>
+        <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
+          {AVAILABLE_IMAGES.map((img, index) => (
+            <button
+              key={index}
+              type="button"
+              onClick={() => setCoverImage(img)}
+              className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all ${
+                coverImage === img ? 'border-[#0066cc] shadow-md scale-[1.02]' : 'border-transparent hover:opacity-80'
+              }`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img 
+                src={img} 
+                alt={`Zdjęcie ${index + 1}`} 
+                className="w-full h-full object-cover" 
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = 'https://placehold.co/400x400/f5f5f7/a1a1aa?text=Brak+zdjęcia';
+                }}
+              />
+              {coverImage === img && (
+                <div className="absolute inset-0 bg-[#0066cc]/20 flex items-center justify-center">
+                  <div className="bg-[#0066cc] text-white rounded-full p-1">
+                    <Check className="w-4 h-4" />
+                  </div>
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-gray-500 mt-3">Wybierz jedno ze zdjęć, które pojawi się na karcie ogłoszenia.</p>
       </div>
 
       <div className={cardClass}>
@@ -377,10 +485,15 @@ export default function CreateListingForm({
             name="description" 
             rows={4} 
             value={description} 
-            onChange={(e) => setDescription(e.target.value)} 
+            onChange={(e) => { setDescription(e.target.value); setDescriptionError(false); }} 
             placeholder="Opisz plan wyjazdu, atmosferę i ustalcie koszty w czacie..." 
-            className={inputClass} 
+            className={`${inputClass} ${descriptionError ? 'ring-2 ring-red-500' : ''}`} 
           />
+          {descriptionError && (
+            <p className="text-red-500 text-sm mt-2 font-medium">
+              Nie można podawać numeru telefonu w opisie. Skontaktuj się z uczestnikami przez czat.
+            </p>
+          )}
         </div>
       </div>
 

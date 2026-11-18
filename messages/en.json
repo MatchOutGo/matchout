@@ -37,12 +37,12 @@
     "filters": "Filters"
   },
   "Landing": {
-  "defaultTitle": "Find available spots for multi-day private ski trips.",
+  "defaultTitle": "Find available spots for multi-day, private ski trips.",
   "btnSearch": "Search",
   "btnSearchSub": "Available spots for a trip",
   "btnOffer": "Offer",
   "btnOfferSub": "I have spots available",
-  "recentOffers": "Recent offers",
+"recentOffers": "Newest offers and promotions",
   "seeMore": "See more",
   "userFallback": "User"
   }

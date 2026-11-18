@@ -1,29 +1,42 @@
-import { type NextRequest } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
 import createMiddleware from 'next-intl/middleware'
-import { updateSession } from '@/utils/supabase/middleware'
+import { routing } from './i18n/routing'
 
-const intlMiddleware = createMiddleware({
-  locales: ['pl', 'en'],
-  defaultLocale: 'pl',
-  localePrefix: 'always'
-})
+const intlMiddleware = createMiddleware(routing)
 
 export async function middleware(request: NextRequest) {
-  // 1. Сначала обрабатываем интернационализацию (добавляем /pl или /en)
-  const response = intlMiddleware(request)
-  
-  // 2. Затем обновляем сессию Supabase
-  const supabaseResponse = await updateSession(request)
-  
-  // Объединяем куки
-  supabaseResponse.cookies.getAll().forEach(cookie => {
-    response.cookies.set(cookie.name, cookie.value)
-  })
+  let response = intlMiddleware(request)
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          response = NextResponse.next({
+            request,
+          })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+
+  await supabase.auth.getUser()
 
   return response
 }
 
 export const config = {
-  // Пропускаем статические файлы и картинки
-  matcher: ['/((?!api|_next|_vercel|.*\\..*).*)']
+  matcher: [
+    // Добавили mp4 (и ico) в исключения, чтобы видео не перехватывалось
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|mp4|ico)$).*)',
+  ],
 }

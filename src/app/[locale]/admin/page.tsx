@@ -18,7 +18,7 @@ async function DashboardContent() {
     <div className="max-w-5xl mx-auto space-y-8">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight text-gray-900">Dashboard</h1>
-        <p className="text-gray-500 mt-1">Przegląd aktywności w serwisie MatchOut.</p>
+        <p className="text-gray-500 mt-1">Przegląd aktywności w serwisie Snow&Go.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
