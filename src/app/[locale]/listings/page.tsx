@@ -6,6 +6,7 @@ import { Link } from '@/i18n/routing';
 import { connection } from 'next/server';
 import { MapPin, Calendar, User, Bus } from 'lucide-react';
 import FilterSidebar from '@/components/FilterSidebar';
+import SortSelect from '@/components/SortSelect'; // <-- Импортируем наш компонент
 import { getTranslations, getLocale } from 'next-intl/server';
 
 type SearchParams = {
@@ -22,17 +23,34 @@ type SearchParams = {
 
 async function ListingsList({ searchParams, locale, activities }: { searchParams: Promise<SearchParams>, locale: string, activities: any[] }) {
   const params = await searchParams;
-  const { activity, countries, cities, dateStart, dateEnd, transport, priceType, origin } = params;
+  const { activity, countries, cities, dateStart, dateEnd, transport, priceType, origin, sort } = params;
   const supabase = await createClient();
 
   let query = (supabase
     .from('listings') as any)
     .select(`*, profiles!user_id (first_name, avatar_url)`)
     .eq('type', 'offer')
-    .eq('status', 'published')
-    .order('price_type', { ascending: false })
-    .order('created_at', { ascending: false });
+    .eq('status', 'published');
 
+  // --- ЛОГИКА СОРТИРОВКИ ---
+  if (sort === 'date_asc') {
+    query = query.order('date_start', { ascending: true });
+  } else if (sort === 'date_desc') {
+    query = query.order('date_start', { ascending: false });
+  } else if (sort === 'price_no_meals_asc') {
+    query = query.order('fixed_price_no_meals', { ascending: true, nullsFirst: false });
+  } else if (sort === 'price_no_meals_desc') {
+    query = query.order('fixed_price_no_meals', { ascending: false, nullsFirst: false });
+  } else if (sort === 'price_with_meals_asc') {
+    query = query.order('fixed_price_with_meals', { ascending: true, nullsFirst: false });
+  } else if (sort === 'price_with_meals_desc') {
+    query = query.order('fixed_price_with_meals', { ascending: false, nullsFirst: false });
+  } else {
+    // Сортировка по умолчанию: сначала "Last Minute", потом самые новые
+    query = query.order('is_special', { ascending: false }).order('created_at', { ascending: false });
+  }
+
+  // --- ЛОГИКА ФИЛЬТРАЦИИ ---
   if (activity) query = query.eq('activity', activity);
   
   if (countries) {
@@ -51,7 +69,9 @@ async function ListingsList({ searchParams, locale, activities }: { searchParams
   if (transport === 'osobowy') query = query.ilike('trip_type', '%car%');
   if (transport === 'bus') query = query.ilike('trip_type', '%bus%');
   
-  if (priceType === 'shared') query = query.eq('price_type', 'shared');
+  // Обновили логику под новые чекбоксы (ищем совпадения в строке)
+  if (priceType === 'shared') query = query.ilike('price_type', '%shared%');
+  if (priceType === 'fixed') query = query.or('price_type.ilike.%fixed_no_meals%,price_type.ilike.%fixed_with_meals%');
 
   if (origin) {
     query = query.or(`origin_city.ilike.%${origin}%,pickup_cities.cs.["${origin}"]`);
@@ -80,8 +100,7 @@ async function ListingsList({ searchParams, locale, activities }: { searchParams
         const dateStartFormatted = listing.date_start ? new Date(listing.date_start).toLocaleDateString(locale === 'pl' ? 'pl-PL' : 'en-GB', { day: 'numeric', month: 'short' }) : '';
         const dateEndFormatted = listing.date_end ? new Date(listing.date_end).toLocaleDateString(locale === 'pl' ? 'pl-PL' : 'en-GB', { day: 'numeric', month: 'short' }) : '';
 
-        // ЛОГИКА LAST MINUTE: Если до выезда меньше 7 дней
-        const isLastMinute = listing.date_start && (new Date(listing.date_start).getTime() - new Date().getTime()) / (1000 * 3600 * 24) <= 7;
+        const isLastMinute = listing.is_special || (listing.date_start && (new Date(listing.date_start).getTime() - new Date().getTime()) / (1000 * 3600 * 24) <= 7);
 
         return (
           <Link 
@@ -96,17 +115,12 @@ async function ListingsList({ searchParams, locale, activities }: { searchParams
                 {activityLabel}
               </div>
 
-              {/* КОНТЕЙНЕР ДЛЯ ПЛАШЕК В ПРАВОМ ВЕРХНЕМ УГЛУ */}
               <div className="absolute top-3 right-3 flex flex-col items-end gap-2">
-                
-                {/* МИГАЮЩАЯ ПЛАШКА LAST MINUTE */}
                 {isLastMinute && (
                   <div className="bg-red-500 text-white px-2.5 py-1 rounded-full text-[11px] font-bold shadow-sm flex items-center gap-1 animate-pulse">
                     🔥 LAST MINUTE
                   </div>
                 )}
-
-                {/* ПЛАШКА BUS */}
                 {listing.trip_type?.includes('bus') && (
                   <div className="bg-purple-600 text-white px-2.5 py-1 rounded-full text-[11px] font-bold shadow-sm flex items-center gap-1">
                     <Bus className="w-3 h-3" /> BUS
@@ -130,7 +144,9 @@ async function ListingsList({ searchParams, locale, activities }: { searchParams
                     <MapPin className="w-3.5 h-3.5 text-[#0066cc] shrink-0" />
                     <span className="text-gray-900 font-medium">Skąd:</span> <span className="truncate">{listing.origin_city}</span>
                     {listing.pickup_cities && listing.pickup_cities.length > 0 && (
-                      <span className="text-xs text-gray-400 truncate">(+ {listing.pickup_cities.join(', ')})</span>
+                      <span className="text-xs text-gray-400 truncate">
+                        (+ {listing.pickup_cities[0]}{listing.pickup_cities.length > 1 ? '...' : ''})
+                      </span>
                     )}
                   </div>
                 )}
@@ -179,11 +195,7 @@ async function HomePageContent({ searchParams }: { searchParams: Promise<SearchP
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 pt-2">
-        <div className="space-y-2">
-          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-gray-900">{tHome('title')}</h1>
-          <p className="text-md text-gray-500 max-w-xl">{tHome('subtitle')}</p>
-        </div>
-        
+        {/* Убрал заголовок, так как ты его удалила в своем коде */}
         <div className="flex items-center gap-4">
           <div className="hidden lg:flex items-center gap-4 bg-white p-3 rounded-2xl shadow-sm border border-gray-100 shrink-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -207,7 +219,16 @@ async function HomePageContent({ searchParams }: { searchParams: Promise<SearchP
           cities={cities || []}
           hasActiveFilters={!!hasActiveFilters} 
         />
+        
         <main className="flex-1 w-full min-w-0">
+          {/* ПАНЕЛЬ СОРТИРОВКИ НАД СЕТКОЙ КАРТОЧЕК */}
+          <div className="flex justify-between items-center mb-6">
+            <p className="text-sm text-gray-500 font-medium">
+              Znaleziono ogłoszeń
+            </p>
+            <SortSelect />
+          </div>
+
           <Suspense fallback={<div className="text-center py-20 text-gray-500">Ładowanie ogłoszeń...</div>}>
             <ListingsList searchParams={searchParams} locale={locale} activities={activities || []} />
           </Suspense>

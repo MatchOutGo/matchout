@@ -126,7 +126,7 @@ async function ListingDetails({ params, searchParams }: { params: Promise<{ id: 
             {/* ЛЕВАЯ КОЛОНКА (Инфо-блок + Описание) */}
             <div className="md:col-span-2 space-y-8">
               
-              {/* ОБНОВЛЕННЫЙ БЛОК С ДЕТАЛЯМИ */}
+              {/* БЛОК С ДЕТАЛЯМИ */}
               <section>
                 <h2 className="text-xl font-semibold mb-4 text-gray-900">Szczegóły wyjazdu</h2>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
@@ -169,7 +169,9 @@ async function ListingDetails({ params, searchParams }: { params: Promise<{ id: 
             {/* ПРАВАЯ КОЛОНКА */}
             <div className="space-y-6">
               <div className="border border-gray-100 p-6 rounded-2xl shadow-sm bg-white">
-                <p className="text-xs text-gray-500 uppercase tracking-wide mb-4">Organizator</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-4">
+                  {isOrganizer ? 'Twoje ogłoszenie' : 'Organizator'}
+                </p>
                 
                 <Link href={`/users/${authorId}`} className="flex items-center gap-3 mb-6 group">
                   <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center font-bold text-gray-600 overflow-hidden group-hover:ring-2 ring-[#0071e3] transition-all shrink-0">
@@ -182,9 +184,12 @@ async function ListingDetails({ params, searchParams }: { params: Promise<{ id: 
                 </Link>
 
                 <div className="space-y-3">
-                  <Link href={`/listings/${id}/chat`} className="w-full py-3 bg-[#0071e3] text-white rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-[#0077ed] transition-colors shadow-sm">
-                    <MessageCircle className="w-4 h-4" /> Napisz do organizatora
-                  </Link>
+                  {/* СКРЫВАЕМ КНОПКУ ДЛЯ САМОГО ОРГАНИЗАТОРА */}
+                  {!isOrganizer && (
+                    <Link href={`/listings/${id}/chat`} className="w-full py-3 bg-[#0071e3] text-white rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-[#0077ed] transition-colors shadow-sm">
+                      <MessageCircle className="w-4 h-4" /> Napisz do organizatora
+                    </Link>
+                  )}
                 </div>
 
                 {isOrganizer && (
@@ -213,7 +218,8 @@ async function ListingDetails({ params, searchParams }: { params: Promise<{ id: 
                   href={`/listings?author=${authorId}`} 
                   className="text-sm font-semibold text-[#0071e3] hover:text-[#004c99] transition-colors underline decoration-2 underline-offset-4"
                 >
-                  Zobacz wszystkie oferty tego organizatora
+                  {/* УМНЫЙ ТЕКСТ ССЫЛКИ */}
+                  {isOrganizer ? 'Zobacz wszystkie swoje oferty' : 'Zobacz wszystkie oferty tego organizatora'}
                 </Link>
               </div>
             </div>

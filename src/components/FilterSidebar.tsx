@@ -5,15 +5,13 @@ import { SlidersHorizontal, ChevronDown, RotateCcw, MountainSnow, MapPin } from 
 import Link from 'next/link'
 import { useRouter, usePathname } from '@/i18n/routing'
 import { useTranslations } from 'next-intl'
-import CityAutocomplete from '@/components/CityAutocomplete' // <-- ДОБАВИЛИ ИМПОРТ
+import CityAutocomplete from '@/components/CityAutocomplete'
 
 type SearchParams = {
-  activity?: string; countries?: string; cities?: string; dateStart?: string; dateEnd?: string; transport?: string; priceType?: string; sort?: string; origin?: string;
+  activity?: string; countries?: string; cities?: string; dateStart?: string; dateEnd?: string; transport?: string; priceType?: string; sort?: string; origin?: string; author?: string;
 }
 
 type DictItem = { value: string; label_pl: string; parent_value?: string; is_resort?: boolean }
-
-// УБРАЛИ КОНСТАНТУ FAMOUS_POLISH_CITIES
 
 export default function FilterSidebar({ 
   params, countries, cities, hasActiveFilters
@@ -34,6 +32,8 @@ export default function FilterSidebar({
 
   const selectedDestCountry = params.countries ? params.countries.split(',')[0] : ''
   const selectedDestCity = params.cities ? params.cities.split(',')[0] : ''
+  
+  const selectedPriceTypes = params.priceType ? params.priceType.split(',') : []
 
   const polandValue = countries.find(c => c.label_pl === 'Polska')?.value || 'PL'
 
@@ -52,12 +52,20 @@ export default function FilterSidebar({
     router.push(`${pathname}?${newParams.toString()}`)
   }
 
-  // В "Dokąd" показываем ТОЛЬКО КУРОРТЫ
+  const togglePriceType = (type: string) => {
+    let newTypes = [...selectedPriceTypes]
+    if (newTypes.includes(type)) {
+      newTypes = newTypes.filter(t => t !== type)
+    } else {
+      newTypes.push(type)
+    }
+    updateFilter('priceType', newTypes.join(','))
+  }
+
   const availableDestCities = cities.filter(c => 
     c.is_resort && (!selectedDestCountry || c.parent_value === selectedDestCountry)
   )
   
-  // В "Skąd" БЕРЕМ ВСЕ ГОРОДА ПОЛЬШИ
   const availableOriginCities = cities
     .filter(c => c.parent_value === polandValue && !c.is_resort)
     .sort((a, b) => a.label_pl.localeCompare(b.label_pl))
@@ -85,13 +93,13 @@ export default function FilterSidebar({
           {hasActiveFilters && (
             <div className="flex justify-end pb-2">
               <Link href="/listings" className="text-xs font-medium text-gray-500 hover:text-[#0066cc] flex items-center gap-1 transition-colors">
-                <RotateCcw className="w-3 h-3" /> Pokaż wszystkie
+                <RotateCcw className="w-3 h-3" /> {t('showAll')}
               </Link>
             </div>
           )}
 
           <div className={cardClass}>
-            <h3 className={titleClass}>Kiedy</h3>
+            <h3 className={titleClass}>{t('when')}</h3>
             <div className="space-y-2">
               <div className="relative">
                 <input 
@@ -103,7 +111,7 @@ export default function FilterSidebar({
                 />
                 {!params.dateStart && (
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
-                    Dowolne
+                    {t('anyDate')}
                   </span>
                 )}
               </div>
@@ -117,7 +125,7 @@ export default function FilterSidebar({
                 />
                 {!params.dateEnd && (
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
-                    Dowolne
+                    {t('anyDate')}
                   </span>
                 )}
               </div>
@@ -125,21 +133,21 @@ export default function FilterSidebar({
           </div>
 
           <div className={cardClass}>
-            <h3 className={titleClass}>Dokąd</h3>
+            <h3 className={titleClass}>{t('destination')}</h3>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className={labelClass}>Kraj</label>
+                <label className={labelClass}>{t('country')}</label>
                 <select value={selectedDestCountry} onChange={(e) => handleDestCountryChange(e.target.value)} className={inputClass}>
-                  <option value="">Wszystkie</option>
+                  <option value="">{t('all')}</option>
                   {countries.map(c => <option key={c.value} value={c.value}>{c.label_pl}</option>)}
                 </select>
               </div>
               <div>
                 <label className={labelClass}>
-                  <MountainSnow className="w-3 h-3 text-[#0066cc]" /> Miejsc.
+                  <MountainSnow className="w-3 h-3 text-[#0066cc]" /> {t('city')}
                 </label>
                 <select value={selectedDestCity} onChange={(e) => updateFilter('cities', e.target.value)} disabled={!selectedDestCountry} className={`${inputClass} ${!selectedDestCountry ? 'opacity-50 cursor-not-allowed bg-gray-100' : ''}`}>
-                  <option value="">Wszystkie</option>
+                  <option value="">{t('all')}</option>
                   {availableDestCities.map(c => (
                     <option key={c.value} value={c.value}>
                       {c.label_pl} 🚡
@@ -151,30 +159,29 @@ export default function FilterSidebar({
           </div>
 
           <div className={cardClass}>
-            <h3 className={titleClass}>Skąd</h3>
+            <h3 className={titleClass}>{t('origin')}</h3>
             <div>
               <label className={labelClass}>
-                <MapPin className="w-3 h-3 text-[#0066cc]" /> Miejscowość (Polska)
+                <MapPin className="w-3 h-3 text-[#0066cc]" /> {t('cityPoland')}
               </label>
-              {/* ЗАМЕНИЛИ SELECT НА CITYAUTOCOMPLETE */}
               <CityAutocomplete 
                 value={params.origin || ''}
                 onChange={(val) => updateFilter('origin', val)}
                 options={availableOriginCities}
-                placeholder="Wpisz miasto..."
+                placeholder={t('typeCity')}
               />
             </div>
           </div>
 
           <div className={cardClass}>
-            <h3 className={titleClass}>Preferencje</h3>
-            <div className="space-y-2">
+            <h3 className={titleClass}>{t('transportPrefs')}</h3>
+            <div className="space-y-2 pb-2">
               {[
-                { val: 'osobowy', label: 'Osobowy' }, 
-                { val: 'bus', label: 'Bus' }, 
-                { val: 'bez_znaczenia', label: 'Bez znaczenia' }
+                { val: 'osobowy', label: t('car') }, 
+                { val: 'bus', label: t('bus') }, 
+                { val: '', label: t('any') }
               ].map(opt => {
-                const isChecked = params.transport === opt.val || (!params.transport && opt.val === 'bez_znaczenia')
+                const isChecked = params.transport === opt.val || (!params.transport && opt.val === '')
                 
                 return (
                   <label key={opt.val} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
@@ -182,7 +189,7 @@ export default function FilterSidebar({
                       type="radio" 
                       name="transport" 
                       checked={isChecked} 
-                      onChange={() => updateFilter('transport', opt.val === 'bez_znaczenia' ? '' : opt.val)} 
+                      onChange={() => updateFilter('transport', opt.val)} 
                       className="w-4 h-4 text-[#0066cc] focus:ring-[#0066cc]" 
                     />
                     {opt.label}
@@ -190,11 +197,42 @@ export default function FilterSidebar({
                 )
               })}
             </div>
-            <div className="pt-2 border-t border-gray-100">
-              <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                <input type="checkbox" checked={params.priceType === 'shared'} onChange={(e) => updateFilter('priceType', e.target.checked ? 'shared' : '')} className="w-4 h-4 rounded text-[#0066cc] focus:ring-[#0066cc]" />
-                Koszty dzielone
+
+            <h3 className={`${titleClass} pt-3 mt-1 border-t border-gray-100`}>{t('costPrefs')}</h3>
+            <div className="space-y-2">
+              
+              {/* ОПЦИЯ BEZ ZNACZENIA ДЛЯ ЦЕНЫ */}
+              <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer pb-1">
+                <input 
+                  type="radio" 
+                  name="priceType"
+                  checked={!params.priceType} 
+                  onChange={() => updateFilter('priceType', '')} 
+                  className="mt-0.5 w-4 h-4 text-[#0066cc] focus:ring-[#0066cc]" 
+                />
+                <span className="leading-tight">{t('any')}</span>
               </label>
+
+              {/* СПЕЦИФИЧЕСКИЕ ТИПЫ ЦЕН (ЧЕКБОКСЫ) */}
+              {[
+                { val: 'shared', label: t('sharedCosts') },
+                { val: 'fixed_no_meals', label: t('fixedCostsNoMeals') || 'Koszty ustalone bez wyżywienia' },
+                { val: 'fixed_with_meals', label: t('fixedCostsWithMeals') || 'Koszty ustalone z wyżywieniem' }
+              ].map(opt => {
+                const isChecked = selectedPriceTypes.includes(opt.val)
+                
+                return (
+                  <label key={opt.val} className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={isChecked} 
+                      onChange={() => togglePriceType(opt.val)} 
+                      className="mt-0.5 w-4 h-4 rounded text-[#0066cc] focus:ring-[#0066cc]" 
+                    />
+                    <span className="leading-tight">{opt.label}</span>
+                  </label>
+                )
+              })}
             </div>
           </div>
 

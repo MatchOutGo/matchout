@@ -11,8 +11,11 @@ type ParsedCost = {
   isShared: boolean
 }
 
-// Регулярка для поиска телефонов
-const PHONE_REGEX = /(?:\+?48[\s-]?)?\d{3}[\s-]?\d{3}[\s-]?\d{3}/g;
+// РЕГУЛЯРКИ ДЛЯ ОЧИСТКИ
+const URL_REGEX = /(https?:\/\/[^\s]+)|(www\.[^\s]+)/gi;
+const DOMAIN_REGEX = /\b[a-zA-Z0-9-]+\.[a-zA-Z]{2,4}\b/gi;
+const LONG_DIGITS_REGEX = /\b\d{8,}\b/g;
+const PHONE_FORMAT_REGEX = /(?:\+?\d{1,3}[\s-]?)?(?:\(?\d{2,4}\)?[\s-]?)?\d{3,4}[\s-]?\d{3,4}[\s-]?\d{3,4}/g;
 
 export async function createListing(formData: FormData) {
   const supabase = await createClient()
@@ -27,9 +30,13 @@ export async function createListing(formData: FormData) {
 
   const title = formData.get('title') as string
   
-  // ОЧИЩАЕМ ОПИСАНИЕ ОТ ТЕЛЕФОНОВ
-  const rawDescription = formData.get('description') as string || '';
-  const description = rawDescription.replace(PHONE_REGEX, '[ukryty numer]');
+  // ОЧИЩАЕМ ОПИСАНИЕ
+  let rawDescription = formData.get('description') as string || '';
+  rawDescription = rawDescription.replace(URL_REGEX, '[ukryty link]');
+  rawDescription = rawDescription.replace(DOMAIN_REGEX, '[ukryty link]');
+  rawDescription = rawDescription.replace(LONG_DIGITS_REGEX, '[ukryty numer]');
+  rawDescription = rawDescription.replace(PHONE_FORMAT_REGEX, '[ukryty numer]');
+  const description = rawDescription;
 
   const trip_type = formData.get('trip_type') as string
   const price_type = formData.get('price_type') as string
@@ -70,7 +77,7 @@ export async function createListing(formData: FormData) {
       type: 'offer',
       activity,
       title,
-      description, // <-- Используем очищенный текст
+      description, 
       trip_type,
       price_type,
       fixed_price_no_meals,
@@ -145,9 +152,13 @@ export async function updateListing(formData: FormData) {
 
   const title = formData.get('title') as string
   
-  // ОЧИЩАЕМ ОПИСАНИЕ ОТ ТЕЛЕФОНОВ
-  const rawDescription = formData.get('description') as string || '';
-  const description = rawDescription.replace(PHONE_REGEX, '[ukryty numer]');
+  // ОЧИЩАЕМ ОПИСАНИЕ
+  let rawDescription = formData.get('description') as string || '';
+  rawDescription = rawDescription.replace(URL_REGEX, '[ukryty link]');
+  rawDescription = rawDescription.replace(DOMAIN_REGEX, '[ukryty link]');
+  rawDescription = rawDescription.replace(LONG_DIGITS_REGEX, '[ukryty numer]');
+  rawDescription = rawDescription.replace(PHONE_FORMAT_REGEX, '[ukryty numer]');
+  const description = rawDescription;
 
   const trip_type = formData.get('trip_type') as string
   const price_type = formData.get('price_type') as string
@@ -184,7 +195,7 @@ export async function updateListing(formData: FormData) {
     .update({
       type: 'offer',
       title, 
-      description, // <-- Очищенный текст
+      description, 
       trip_type, 
       price_type, 
       fixed_price_no_meals,

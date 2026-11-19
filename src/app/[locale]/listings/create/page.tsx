@@ -36,10 +36,7 @@ async function CreateListingContent({
 
   return (
     <div className="max-w-4xl mx-auto pt-8 pb-24">
-      <div className="mb-10 text-center">
-        <h1 className="text-3xl font-semibold tracking-tight text-gray-900 mb-2">Utwórz nowy wyjazd</h1>
-        <p className="text-gray-500">Wypełnij szczegóły, aby znaleźć swoją ekipę.</p>
-      </div>
+ 
       
       {message && (
         <div className="mb-8 p-4 bg-red-50 text-red-700 rounded-2xl border border-red-100 text-sm">

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createListing, updateListing } from './actions'
 import { Loader2, MapPin, X, MountainSnow, Flame, Check } from 'lucide-react'
 import { useFormStatus } from 'react-dom'
+import { useTranslations } from 'next-intl' // <-- Добавили
 import CustomSelect from '@/components/CustomSelect'
 import CitySelect from '@/components/CitySelect'
 import CityAutocomplete from '@/components/CityAutocomplete'
@@ -35,19 +36,7 @@ type InitialListingData = {
   cover_image?: string
 }
 
-const TRIP_TYPE_OPTIONS = [
-  { value: 'bus', label: 'Bus' },
-  { value: 'osobowy', label: 'Osobowy' },
-  { value: 'bez_znaczenia', label: 'Bez znaczenia' },
-] as const
-
-const PRICE_TYPE_OPTIONS = [
-  { value: 'shared', label: 'Koszty dzielone' },
-  { value: 'fixed_no_meals', label: 'Koszty ustalone bez wyżywienia' },
-  { value: 'fixed_with_meals', label: 'Koszty ustalone z wyżywieniem' },
-] as const
-
-const AVAILABLE_IMAGES = Array.from({ length: 20 }, (_, i) => `/images/activities/${i + 1}.jpg`);
+const AVAILABLE_IMAGES = Array.from({ length: 14 }, (_, i) => `/images/activities/${i + 1}.jpg`);
 
 const normalizeTripType = (value?: string) => {
   if (value === 'bus' || value === 'osobowy' || value === 'bez_znaczenia') return value
@@ -58,10 +47,12 @@ const normalizeTripType = (value?: string) => {
 
 function SubmitButton({ isEdit }: { isEdit: boolean }) {
   const { pending } = useFormStatus();
+  const t = useTranslations('CreateListing');
+  
   return (
     <button type="submit" disabled={pending} className="w-full py-4 bg-[#0066cc] text-white text-[17px] rounded-full font-medium hover:bg-[#004c99] transition-colors shadow-lg disabled:opacity-70 flex items-center justify-center gap-2">
       {pending && <Loader2 className="w-5 h-5 animate-spin" />}
-      {pending ? 'Przetwarzanie...' : (isEdit ? 'Zapisz zmiany' : 'Opublikuj ogłoszenie')}
+      {pending ? t('submitting') : (isEdit ? t('submitEdit') : t('submit'))}
     </button>
   );
 }
@@ -79,6 +70,7 @@ export default function CreateListingForm({
   showGender?: boolean,
   showChildren?: boolean
 }) {
+  const t = useTranslations('CreateListing') // <-- Инициализация переводов
   const [today, setToday] = useState('') 
 
   useEffect(() => {
@@ -119,7 +111,6 @@ export default function CreateListingForm({
   
   const [isSpecial, setIsSpecial] = useState(initialData?.is_special || false)
 
-  // СОСТОЯНИЕ ДЛЯ ОШИБКИ ОПИСАНИЯ
   const [descriptionError, setDescriptionError] = useState(false);
 
   const polandValue = countries.find(c => c.label_pl === 'Polska')?.value || 'PL'
@@ -166,7 +157,6 @@ export default function CreateListingForm({
 
   const formAction = listingId ? updateListing : createListing;
 
-  // ВАЛИДАЦИЯ ФОРМЫ
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     let hasError = false;
 
@@ -176,9 +166,17 @@ export default function CreateListingForm({
       hasError = true;
     }
 
-    // Проверка на телефон в описании
-    const phoneRegex = /(?:\+?48[\s-]?)?\d{3}[\s-]?\d{3}[\s-]?\d{3}/g;
-    if (phoneRegex.test(description)) {
+    const urlRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)/gi;
+    const domainRegex = /\b[a-zA-Z0-9-]+\.[a-zA-Z]{2,4}\b/gi;
+    const longDigitsRegex = /\b\d{8,}\b/g;
+    const phoneFormatRegex = /(?:\+?\d{1,3}[\s-]?)?(?:\(?\d{2,4}\)?[\s-]?)?\d{3,4}[\s-]?\d{3,4}[\s-]?\d{3,4}/g;
+    
+    if (
+      urlRegex.test(description) || 
+      domainRegex.test(description) || 
+      longDigitsRegex.test(description) || 
+      phoneFormatRegex.test(description)
+    ) {
       e.preventDefault();
       setDescriptionError(true);
       hasError = true;
@@ -186,7 +184,6 @@ export default function CreateListingForm({
       setDescriptionError(false);
     }
     
-    // Если есть ошибки, предотвращаем отправку (на всякий случай, если что-то упустили)
     if (hasError) {
       e.preventDefault();
     }
@@ -214,17 +211,21 @@ export default function CreateListingForm({
       <input type="hidden" name="price_type" value={selectedPriceTypes.join(',')} />
 
       <div className={cardClass}>
-        <h2 className={titleClass}>Podstawowe informacje</h2>
+        <h2 className={titleClass}>{t('basicInfo')}</h2>
 
         <div>
-          <label className={labelClass}>Tytuł</label>
-          <input name="title" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="np. Weekend w Alpach" className={inputClass} />
+          <label className={labelClass}>{t('title')}</label>
+          <input name="title" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('titlePlaceholder')} className={inputClass} />
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Rodzaj wyjazdu</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">{t('tripType')}</label>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-[#f5f5f7] p-4 rounded-2xl">
-            {TRIP_TYPE_OPTIONS.map((type) => (
+            {[
+              { value: 'bus', label: t('bus') },
+              { value: 'osobowy', label: t('car') },
+              { value: 'bez_znaczenia', label: t('any') },
+            ].map((type) => (
               <label key={type.value} className="flex items-center gap-3 cursor-pointer">
                 <input 
                   type="radio" 
@@ -242,39 +243,39 @@ export default function CreateListingForm({
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-gray-100">
           <div>
-            <label className={labelClass}>Data wyjazdu</label>
+            <label className={labelClass}>{t('dateStart')}</label>
             <input name="date_start" type="date" min={today} className={inputClass} value={dateStart} onChange={(e) => { setDateStart(e.target.value); if (dateEnd && e.target.value > dateEnd) setDateEnd('') }} />
           </div>
           <div>
-            <label className={labelClass}>Data przyjazdu</label>
+            <label className={labelClass}>{t('dateEnd')}</label>
             <input name="date_end" type="date" className={inputClass} value={dateEnd} min={dateStart || today} onChange={(e) => setDateEnd(e.target.value)} disabled={!dateStart} />
           </div>
           <div>
-            <label className={labelClass}>Ilość dni na nartach</label>
+            <label className={labelClass}>{t('skiDays')}</label>
             <input name="ski_days" type="number" min="1" max="30" required value={skiDays} onChange={(e) => setSkiDays(Number(e.target.value))} className={inputClass} />
           </div>
         </div>
       </div>
 
       <div className={cardClass}>
-        <h2 className={titleClass}>Gdzie jedziemy</h2>
+        <h2 className={titleClass}>{t('whereTo')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className={labelClass}>Kraj</label>
+            <label className={labelClass}>{t('country')}</label>
             <select value={destCountry} onChange={(e) => { setDestCountry(e.target.value); setDestCity(''); }} className={inputClass}>
-              <option value="">Wybierz kraj...</option>
+              <option value="">{t('selectCountry')}</option>
               {countries.map(c => <option key={c.value} value={c.value}>{c.label_pl}</option>)}
             </select>
           </div>
           <div>
             <label className={`${labelClass} flex items-center gap-1.5`}>
-              <MountainSnow className="w-3.5 h-3.5 text-[#0066cc]" /> Miejscowość / Ośrodek
+              <MountainSnow className="w-3.5 h-3.5 text-[#0066cc]" /> {t('cityResort')}
             </label>
             <CitySelect 
               value={destCity}
               onChange={setDestCity}
               options={availableDestCities}
-              placeholder="Wybierz miejscowość..."
+              placeholder={t('selectCity')}
               disabled={!destCountry}
             />
           </div>
@@ -282,24 +283,24 @@ export default function CreateListingForm({
       </div>
 
       <div className={cardClass}>
-        <h2 className={titleClass}>Skąd wyjeżdżamy</h2>
+        <h2 className={titleClass}>{t('whereFrom')}</h2>
         
         <div>
-          <label className={labelClass}>Miasto</label>
+          <label className={labelClass}>{t('city')}</label>
           <CityAutocomplete 
             value={originCity}
             onChange={setOriginCity}
             options={availableOriginCities}
-            placeholder="Wpisz miasto (np. Warszawa)..."
+            placeholder={t('typeCity')}
           />
           <input type="hidden" name="origin_city" value={originCity} />
         </div>
 
         <div className="pt-4 border-t border-gray-100">
-          <label className={labelClass}>Możliwość dosiadki (Miejsca zbiórki po drodze)</label>
+          <label className={labelClass}>{t('pickup')}</label>
           <div className="relative">
             <input 
-              placeholder="Wpisz miasto..." 
+              placeholder={t('typeCity')}
               className={inputClass}
               value={pickupInput}
               onChange={(e) => { setPickupInput(e.target.value); setShowPickupSuggestions(true) }}
@@ -339,11 +340,15 @@ export default function CreateListingForm({
       </div>
 
       <div className={cardClass}>
-        <h2 className={titleClass}>Koszty</h2>
+        <h2 className={titleClass}>{t('costs')}</h2>
         
         <div>
           <div className={`space-y-3 p-2 rounded-2xl border-2 transition-colors ${priceError ? 'border-red-200 bg-red-50' : 'border-transparent'}`}>
-            {PRICE_TYPE_OPTIONS.map((type) => (
+            {[
+              { value: 'shared', label: t('sharedCosts') },
+              { value: 'fixed_no_meals', label: t('fixedNoMeals') },
+              { value: 'fixed_with_meals', label: t('fixedWithMeals') },
+            ].map((type) => (
               <div key={type.value} className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-3 rounded-xl transition-colors ${selectedPriceTypes.includes(type.value) ? 'bg-[#f5f5f7] border border-gray-200' : 'bg-white border border-gray-100 hover:bg-gray-50'}`}>
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input 
@@ -364,7 +369,7 @@ export default function CreateListingForm({
                       required
                       value={priceNoMeals} 
                       onChange={(e) => setPriceNoMeals(e.target.value)} 
-                      placeholder="Kwota" 
+                      placeholder={t('amount')} 
                       className="w-full sm:w-32 bg-white border border-gray-200 rounded-xl px-3 py-2 text-[15px] outline-none focus:ring-2 focus:ring-[#0066cc]/50" 
                     />
                     <span className="text-gray-500 text-sm font-medium">zł</span>
@@ -380,7 +385,7 @@ export default function CreateListingForm({
                       required
                       value={priceWithMeals} 
                       onChange={(e) => setPriceWithMeals(e.target.value)} 
-                      placeholder="Kwota" 
+                      placeholder={t('amount')} 
                       className="w-full sm:w-32 bg-white border border-gray-200 rounded-xl px-3 py-2 text-[15px] outline-none focus:ring-2 focus:ring-[#0066cc]/50" 
                     />
                     <span className="text-gray-500 text-sm font-medium">zł</span>
@@ -391,7 +396,7 @@ export default function CreateListingForm({
           </div>
           
           {priceError && (
-            <p className="text-red-500 text-sm mt-3 font-medium">Wybierz przynajmniej jeden rodzaj kosztów.</p>
+            <p className="text-red-500 text-sm mt-3 font-medium">{t('selectCostError')}</p>
           )}
         </div>
 
@@ -399,14 +404,14 @@ export default function CreateListingForm({
           <div className={`grid grid-cols-1 ${showGender && showChildren ? 'md:grid-cols-2' : 'md:grid-cols-1'} gap-6 pt-2`}>
             {showGender && (
               <div>
-                <label className={labelClass}>Dla kogo miejsce?</label>
-                <CustomSelect name="gender_pref" options={[{ value: 'any', label: 'Wszyscy' }, { value: 'men', label: 'Tylko mężczyźni' }, { value: 'women', label: 'Tylko kobiety' }]} defaultValue={initialData?.gender_pref || 'any'} />
+                <label className={labelClass}>{t('forWhom')}</label>
+                <CustomSelect name="gender_pref" options={[{ value: 'any', label: t('everyone') }, { value: 'men', label: t('men') }, { value: 'women', label: t('women') }]} defaultValue={initialData?.gender_pref || 'any'} />
               </div>
             )}
             {showChildren && (
               <div>
-                <label className={labelClass}>Dzieci</label>
-                <CustomSelect name="children_allowed" options={[{ value: 'yes', label: 'Można' }, { value: 'no', label: 'Tylko dorośli' }, { value: 'family', label: 'Wyjazd rodzinny' }]} defaultValue={initialData?.children_allowed || 'yes'} />
+                <label className={labelClass}>{t('children')}</label>
+                <CustomSelect name="children_allowed" options={[{ value: 'yes', label: t('yes') }, { value: 'no', label: t('no') }, { value: 'family', label: t('family') }]} defaultValue={initialData?.children_allowed || 'yes'} />
               </div>
             )}
           </div>
@@ -415,11 +420,11 @@ export default function CreateListingForm({
         <div className="bg-[#f5f5f7] p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-4">
           <label className="flex items-center gap-3 cursor-pointer">
             <input type="checkbox" checked={prepaymentRequired} onChange={(e) => setPrepaymentRequired(e.target.checked)} className="w-5 h-5 rounded text-[#0066cc] focus:ring-[#0066cc]" />
-            <span className="font-medium text-gray-900">Wymagana zaliczka</span>
+            <span className="font-medium text-gray-900">{t('deposit')}</span>
           </label>
           {prepaymentRequired && (
             <div className="flex items-center gap-2">
-              <input name="prepayment_amount" type="number" min="0" required value={prepaymentAmount} onChange={(e) => setPrepaymentAmount(e.target.value)} placeholder="Kwota (zł)" className="w-32 bg-white border-none rounded-xl px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#0066cc]/50 outline-none" />
+              <input name="prepayment_amount" type="number" min="0" required value={prepaymentAmount} onChange={(e) => setPrepaymentAmount(e.target.value)} placeholder={t('depositAmount')} className="w-32 bg-white border-none rounded-xl px-3 py-2 text-[15px] focus:ring-2 focus:ring-[#0066cc]/50 outline-none" />
               <span className="text-gray-500">zł</span>
             </div>
           )}
@@ -428,9 +433,9 @@ export default function CreateListingForm({
         <div className="bg-orange-50 p-5 rounded-2xl border border-orange-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-4">
           <div>
             <p className="font-semibold text-orange-900 flex items-center gap-2">
-              <Flame className="w-5 h-5 text-orange-500" /> Oferta Last Minute / Promocja
+              <Flame className="w-5 h-5 text-orange-500" /> {t('lastMinute')}
             </p>
-            <p className="text-sm text-orange-700/80 mt-1">Zaznacz, jeśli chcesz wyróżnić tę ofertę na stronie głównej.</p>
+            <p className="text-sm text-orange-700/80 mt-1">{t('lastMinuteDesc')}</p>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
             <input 
@@ -445,7 +450,7 @@ export default function CreateListingForm({
       </div>
 
       <div className={cardClass}>
-        <h2 className={titleClass}>Wybierz zdjęcie główne</h2>
+        <h2 className={titleClass}>{t('coverImage')}</h2>
         <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
           {AVAILABLE_IMAGES.map((img, index) => (
             <button
@@ -475,23 +480,28 @@ export default function CreateListingForm({
             </button>
           ))}
         </div>
-        <p className="text-xs text-gray-500 mt-3">Wybierz jedno ze zdjęć, które pojawi się na karcie ogłoszenia.</p>
+        <p className="text-xs text-gray-500 mt-3">{t('coverImageDesc')}</p>
       </div>
 
       <div className={cardClass}>
         <div>
-          <label className={labelClass}>Opis (opcjonalnie)</label>
+          <label className={labelClass}>{t('description')}</label>
           <textarea 
             name="description" 
             rows={4} 
             value={description} 
             onChange={(e) => { setDescription(e.target.value); setDescriptionError(false); }} 
-            placeholder="Opisz plan wyjazdu, atmosferę i ustalcie koszty w czacie..." 
+            placeholder={t('descriptionPlaceholder')} 
             className={`${inputClass} ${descriptionError ? 'ring-2 ring-red-500' : ''}`} 
           />
+          
+          <p className="text-xs text-gray-500 mt-2">
+            {t('descriptionWarning')}
+          </p>
+
           {descriptionError && (
             <p className="text-red-500 text-sm mt-2 font-medium">
-              Nie można podawać numeru telefonu w opisie. Skontaktuj się z uczestnikami przez czat.
+              {t('descriptionError')}
             </p>
           )}
         </div>
